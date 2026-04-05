@@ -1,0 +1,17 @@
+{
+  "name": "@PORT_NAME@",
+  "version-string": "@PORT_VERSION@",
+  "description": "@PORT_DESCRIPTION@",
+  "license": "@PORT_LICENSE@",
+  "homepage": "@PORT_HOMEPAGE@",
+  "dependencies": [
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ]
+}

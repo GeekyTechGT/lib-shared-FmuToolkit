@@ -1,0 +1,15 @@
+{
+  "version": 6,
+  "include": [
+    "CMakePresets.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "local-vcpkg-debug",
+      "inherits": "vcpkg-debug",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "C:/src/vcpkg/scripts/buildsystems/vcpkg.cmake"
+      }
+    }
+  ]
+}

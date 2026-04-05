@@ -1,0 +1,356 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 25,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "YOUR_LIBRARY_BUILD_TESTS": "ON",
+                "YOUR_LIBRARY_ENABLE_WARNINGS": "ON",
+                "YOUR_LIBRARY_ENABLE_WERROR": "OFF",
+                "YOUR_LIBRARY_ENABLE_SANITIZERS": "OFF"
+            }
+        },
+        {
+            "name": "ninja-base",
+            "hidden": true,
+            "inherits": "base",
+            "generator": "Ninja"
+        },
+        {
+            "name": "vcpkg-base",
+            "hidden": true,
+            "inherits": "ninja-base",
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            }
+        },
+        {
+            "name": "dev-debug",
+            "displayName": "Developer Debug",
+            "inherits": "ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "YOUR_LIBRARY_ENABLE_SANITIZERS": "ON"
+            }
+        },
+        {
+            "name": "dev-release",
+            "displayName": "Developer Release",
+            "inherits": "ninja-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "vcpkg-debug",
+            "displayName": "Developer Debug (vcpkg)",
+            "inherits": "vcpkg-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "YOUR_LIBRARY_ENABLE_SANITIZERS": "ON"
+            }
+        },
+        {
+            "name": "vcpkg-release",
+            "displayName": "Developer Release (vcpkg)",
+            "inherits": "vcpkg-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "linux-gcc-debug",
+            "displayName": "Linux GCC Debug",
+            "inherits": "dev-debug",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            },
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++"
+            }
+        },
+        {
+            "name": "linux-clang-debug",
+            "displayName": "Linux Clang Debug",
+            "inherits": "dev-debug",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            },
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "/usr/bin/clang",
+                "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
+            }
+        },
+        {
+            "name": "linux-gcc-vcpkg-debug",
+            "displayName": "Linux GCC Debug (vcpkg)",
+            "inherits": "vcpkg-debug",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            },
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++"
+            }
+        },
+        {
+            "name": "linux-clang-vcpkg-debug",
+            "displayName": "Linux Clang Debug (vcpkg)",
+            "inherits": "vcpkg-debug",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            },
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "/usr/bin/clang",
+                "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
+            }
+        },
+        {
+            "name": "macos-clang-debug",
+            "displayName": "macOS Clang Debug",
+            "inherits": "dev-debug",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
+            },
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "/usr/bin/clang",
+                "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
+            }
+        },
+        {
+            "name": "macos-clang-vcpkg-debug",
+            "displayName": "macOS Clang Debug (vcpkg)",
+            "inherits": "vcpkg-debug",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
+            },
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "/usr/bin/clang",
+                "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
+            }
+        },
+        {
+            "name": "windows-msvc-debug",
+            "displayName": "Windows MSVC Debug",
+            "inherits": "base",
+            "generator": "Ninja",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_C_COMPILER": "$env{VCToolsInstallDir}bin/Hostx64/x64/cl.exe",
+                "CMAKE_CXX_COMPILER": "$env{VCToolsInstallDir}bin/Hostx64/x64/cl.exe"
+            }
+        },
+        {
+            "name": "windows-msvc-vcpkg-debug",
+            "displayName": "Windows MSVC Debug (vcpkg)",
+            "inherits": "vcpkg-debug",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "$env{VCToolsInstallDir}bin/Hostx64/x64/cl.exe",
+                "CMAKE_CXX_COMPILER": "$env{VCToolsInstallDir}bin/Hostx64/x64/cl.exe"
+            }
+        },
+        {
+            "name": "windows-mingw-debug",
+            "displayName": "Windows MinGW Debug",
+            "inherits": "dev-debug",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "C:/eng_apps/msys64/mingw64/bin/gcc.exe",
+                "CMAKE_CXX_COMPILER": "C:/eng_apps/msys64/mingw64/bin/g++.exe"
+            }
+        },
+        {
+            "name": "windows-mingw-vcpkg-debug",
+            "displayName": "Windows MinGW Debug (vcpkg)",
+            "inherits": "vcpkg-debug",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "C:/eng_apps/msys64/mingw64/bin/gcc.exe",
+                "CMAKE_CXX_COMPILER": "C:/eng_apps/msys64/mingw64/bin/g++.exe"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "dev-debug",
+            "configurePreset": "dev-debug"
+        },
+        {
+            "name": "dev-release",
+            "configurePreset": "dev-release"
+        },
+        {
+            "name": "vcpkg-debug",
+            "configurePreset": "vcpkg-debug"
+        },
+        {
+            "name": "vcpkg-release",
+            "configurePreset": "vcpkg-release"
+        },
+        {
+            "name": "linux-gcc-debug",
+            "configurePreset": "linux-gcc-debug"
+        },
+        {
+            "name": "linux-clang-debug",
+            "configurePreset": "linux-clang-debug"
+        },
+        {
+            "name": "linux-gcc-vcpkg-debug",
+            "configurePreset": "linux-gcc-vcpkg-debug"
+        },
+        {
+            "name": "linux-clang-vcpkg-debug",
+            "configurePreset": "linux-clang-vcpkg-debug"
+        },
+        {
+            "name": "macos-clang-debug",
+            "configurePreset": "macos-clang-debug"
+        },
+        {
+            "name": "macos-clang-vcpkg-debug",
+            "configurePreset": "macos-clang-vcpkg-debug"
+        },
+        {
+            "name": "windows-msvc-debug",
+            "configurePreset": "windows-msvc-debug"
+        },
+        {
+            "name": "windows-msvc-vcpkg-debug",
+            "configurePreset": "windows-msvc-vcpkg-debug"
+        },
+        {
+            "name": "windows-mingw-debug",
+            "configurePreset": "windows-mingw-debug"
+        },
+        {
+            "name": "windows-mingw-vcpkg-debug",
+            "configurePreset": "windows-mingw-vcpkg-debug"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "dev-debug",
+            "configurePreset": "dev-debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "vcpkg-debug",
+            "configurePreset": "vcpkg-debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "linux-gcc-debug",
+            "configurePreset": "linux-gcc-debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "linux-clang-debug",
+            "configurePreset": "linux-clang-debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "linux-gcc-vcpkg-debug",
+            "configurePreset": "linux-gcc-vcpkg-debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "linux-clang-vcpkg-debug",
+            "configurePreset": "linux-clang-vcpkg-debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "macos-clang-debug",
+            "configurePreset": "macos-clang-debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "macos-clang-vcpkg-debug",
+            "configurePreset": "macos-clang-vcpkg-debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "windows-msvc-debug",
+            "configurePreset": "windows-msvc-debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "windows-msvc-vcpkg-debug",
+            "configurePreset": "windows-msvc-vcpkg-debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "windows-mingw-debug",
+            "configurePreset": "windows-mingw-debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "windows-mingw-vcpkg-debug",
+            "configurePreset": "windows-mingw-vcpkg-debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        }
+    ]
+}

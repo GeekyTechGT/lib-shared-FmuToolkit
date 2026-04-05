@@ -1,0 +1,25 @@
+vcpkg_from_git(
+    OUT_SOURCE_PATH SOURCE_PATH
+    URL "@SOURCE_REPOSITORY@"
+    REF "@SOURCE_REF@"
+)
+
+vcpkg_cmake_configure(
+    SOURCE_PATH "${SOURCE_PATH}"
+    OPTIONS
+        -DYOUR_LIBRARY_BUILD_TESTS=OFF
+        -DYOUR_LIBRARY_ENABLE_WARNINGS=OFF
+        -DYOUR_LIBRARY_ENABLE_WERROR=OFF
+        -DYOUR_LIBRARY_ENABLE_SANITIZERS=OFF
+)
+
+vcpkg_cmake_install()
+vcpkg_cmake_config_fixup(CONFIG_PATH lib/cmake/your_library)
+vcpkg_copy_pdbs()
+
+file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
+file(INSTALL
+    "${SOURCE_PATH}/LICENSE"
+    DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}"
+    RENAME copyright
+)

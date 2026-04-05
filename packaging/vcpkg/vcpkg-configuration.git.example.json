@@ -1,0 +1,16 @@
+{
+  "default-registry": {
+    "kind": "builtin",
+    "baseline": "<builtin-vcpkg-baseline-commit>"
+  },
+  "registries": [
+    {
+      "kind": "git",
+      "repository": "https://github.com/<org>/<registry-repo>.git",
+      "baseline": "<custom-registry-baseline-commit>",
+      "packages": [
+        "your-library"
+      ]
+    }
+  ]
+}

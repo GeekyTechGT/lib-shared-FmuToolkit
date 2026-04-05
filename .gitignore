@@ -1,0 +1,49 @@
+# Build directories
+/build/
+/out/
+/dist/
+.docker/
+
+# CMake
+CMakeUserPresets.json
+scripts/vcpkg_registry_config.bat
+CMakeCache.txt
+CMakeFiles/
+cmake-build-*/
+compile_commands.json
+CTestTestfile.cmake
+Testing/
+install_manifest.txt
+
+# IDEs and editors
+.vscode/
+.idea/
+*.code-workspace
+
+# Tool outputs
+*.log
+*.tmp
+*.user
+*.obj
+*.pdb
+*.ilk
+*.exe
+*.ninja_deps
+*.ninja_log
+.cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Coverage and reports
+coverage/
+coverage.xml
+*.gcda
+*.gcno
+*.profraw
+*.profdata
+
+# Python helper environment
+.venv/
+__pycache__/
