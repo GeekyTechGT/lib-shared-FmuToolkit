@@ -1,7 +1,7 @@
 {
     "name": "your-library",
     "version-string": "0.1.0",
-    "description": "Professional C++23 library scaffold with PIMPL install export support and tests",
+    "description": "Reusable C++23 library scaffold with installable package exports, examples, tests, and vcpkg support",
     "license": "MIT",
     "dependencies": [
         "gtest"

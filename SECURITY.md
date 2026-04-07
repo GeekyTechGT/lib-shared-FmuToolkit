@@ -1,16 +1,28 @@
 # Security Policy
 
-## Reporting a vulnerability
+## Reporting
 
-Please do not disclose security vulnerabilities publicly before maintainers have had time to assess and fix them.
+Do not report vulnerabilities through public issues, pull requests, or public discussions.
+Report them privately through the maintainer channel used for repository administration.
 
-Share the report privately with:
+Include, when possible:
 
-- affected component
-- impact assessment
+- affected commit, branch, or released package version
+- affected component, target, or preset
+- expected behavior versus observed behavior
+- impact and likely exploitation conditions
 - reproduction steps
-- suggested mitigation, if available
+- suggested mitigation or containment, if already known
 
-## Supported versions
+## In Scope
 
-Security support policy should be defined by the maintainers of the concrete library derived from this scaffold.
+Security-relevant issues include, for example:
+
+- unsafe script or packaging behavior
+- install or packaging defects that ship the wrong binaries, headers, or metadata
+- build or helper behavior that silently produces unsafe or misleading artifacts
+- example or scaffold code that encourages an unsafe default integration pattern
+
+## Supported Versions
+
+Only the latest maintained revision and its corresponding packaging assets are supported unless maintainers explicitly state otherwise.

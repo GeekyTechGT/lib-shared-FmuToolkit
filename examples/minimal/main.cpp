@@ -3,7 +3,8 @@
 #include <iostream>
 
 int main() {
-    const yourlib::Greeter greeter{"Hello"};
-    std::cout << greeter.greet("example") << '\n';
+    const yourlib::LibraryInfo info;
+    std::cout << info.describe("minimal_example") << '
+';
     return 0;
 }

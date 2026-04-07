@@ -1,16 +1,18 @@
-#include "yourlib/yourlib.hpp"
+#include <yourlib/yourlib.hpp>
 
 #include <gtest/gtest.h>
 
-TEST(GreeterTests, UsesPrefixAndName) {
-    const yourlib::Greeter greeter{"Hi"};
-
-    EXPECT_EQ(greeter.greet("Codex"), "Hi, Codex!");
+TEST(LibraryInfoTest, UsesDefaultName) {
+    const yourlib::LibraryInfo info;
+    EXPECT_EQ(info.name(), "your_library");
 }
 
-TEST(GreeterTests, AllowsPrefixMutation) {
-    yourlib::Greeter greeter;
-    greeter.set_prefix("Welcome");
+TEST(LibraryInfoTest, ReportsGeneratedVersion) {
+    const yourlib::LibraryInfo info;
+    EXPECT_FALSE(info.version().empty());
+}
 
-    EXPECT_EQ(greeter.greet("team"), "Welcome, team!");
+TEST(LibraryInfoTest, DescribesConsumer) {
+    const yourlib::LibraryInfo info{"demo_lib"};
+    EXPECT_EQ(info.describe("integration-test"), "demo_lib " YOUR_LIBRARY_VERSION " ready for integration-test");
 }

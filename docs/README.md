@@ -2,21 +2,26 @@
 
 This directory contains the long-lived technical documentation for the scaffold.
 
-## What each document is for
+## Reading order
 
-- `architecture.md`: explains how the repository is split across public API, implementation, build logic, tests, examples, and automation.
-- `design.md`: explains why the example API uses PIMPL and which design tradeoffs the scaffold is trying to model.
-- `build.md`: explains presets, CLI flow, Windows `project_manager.bat`, Docker usage, install/deploy flow, and quality tools.
-- `release.md`: explains what “release ready” means in this scaffold and how the placeholder release workflow should be specialized.
-- `dependencies.md`: lists actual runtime, build, test, and developer-tool dependencies used by the repository.
-- `specs/`: stores concrete feature or library specifications.
-- `adr/`: stores architectural decisions with rationale and consequences.
+1. `architecture/overview.md`
+2. `architecture/design.md`
+3. `reference/api-reference.md`
+4. `specs/library-spec.md`
+5. `process/build.md`
+6. `process/dependencies.md`
+7. `process/customer-vcpkg-consumption.md`
+8. `process/release.md`
+9. `adr/0001-use-pimpl.md`
 
-## Recommended reading order
+## Document map
 
-1. `architecture.md`
-2. `design.md`
-3. `build.md`
-4. `dependencies.md`
-5. `specs/library-spec.md`
-6. `adr/0001-use-pimpl.md`
+- `architecture/overview.md`: repository structure, zero-touch reuse expectations, and public/private boundaries
+- `architecture/design.md`: rationale for the placeholder API, PIMPL, install surface, and package model
+- `reference/api-reference.md`: API reference for the placeholder scaffold surface
+- `process/build.md`: CMake presets, build layout, install flow, test flow, Docker, and Windows scripts
+- `process/dependencies.md`: compiler, toolchain, test, and packaging dependencies
+- `process/customer-vcpkg-consumption.md`: customer-app integration flow through the private vcpkg registry
+- `process/release.md`: versioning, changelog, install validation, and private distribution notes
+- `specs/library-spec.md`: scaffold functional and non-functional expectations
+- `adr/`: architecture decisions

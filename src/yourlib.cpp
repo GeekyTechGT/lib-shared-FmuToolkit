@@ -1,4 +1,4 @@
-#include "yourlib/yourlib.hpp"
+#include <yourlib/yourlib.hpp>
 
 #include "yourlib_impl.hpp"
 
@@ -6,40 +6,56 @@
 
 namespace yourlib {
 
-Greeter::Impl::Impl(std::string prefix_value)
-    : prefix_(std::move(prefix_value)) {}
+LibraryInfo::Impl::Impl(std::string library_name)
+    : library_name_(std::move(library_name)) {}
 
-std::string Greeter::Impl::greet(std::string_view name) const {
-    return prefix_ + ", " + std::string{name} + "!";
+std::string LibraryInfo::Impl::name() const {
+    return library_name_;
 }
 
-void Greeter::Impl::set_prefix(std::string prefix_value) {
-    prefix_ = std::move(prefix_value);
+std::string LibraryInfo::Impl::version() const {
+    return YOUR_LIBRARY_VERSION;
 }
 
-Greeter::Greeter(std::string prefix)
-    : impl_(std::make_unique<Impl>(std::move(prefix))) {}
+std::string LibraryInfo::Impl::describe(std::string_view consumer) const {
+    return library_name_ + " " + YOUR_LIBRARY_VERSION + " ready for " + std::string{consumer};
+}
 
-Greeter::~Greeter() = default;
-Greeter::Greeter(Greeter&&) noexcept = default;
-Greeter& Greeter::operator=(Greeter&&) noexcept = default;
+void LibraryInfo::Impl::set_name(std::string library_name) {
+    library_name_ = std::move(library_name);
+}
 
-Greeter::Greeter(const Greeter& other)
+LibraryInfo::LibraryInfo(std::string library_name)
+    : impl_(std::make_unique<Impl>(std::move(library_name))) {}
+
+LibraryInfo::~LibraryInfo() = default;
+LibraryInfo::LibraryInfo(LibraryInfo&&) noexcept = default;
+LibraryInfo& LibraryInfo::operator=(LibraryInfo&&) noexcept = default;
+
+LibraryInfo::LibraryInfo(const LibraryInfo& other)
     : impl_(std::make_unique<Impl>(*other.impl_)) {}
 
-Greeter& Greeter::operator=(const Greeter& other) {
+LibraryInfo& LibraryInfo::operator=(const LibraryInfo& other) {
     if (this != &other) {
         impl_ = std::make_unique<Impl>(*other.impl_);
     }
     return *this;
 }
 
-std::string Greeter::greet(std::string_view name) const {
-    return impl_->greet(name);
+std::string LibraryInfo::name() const {
+    return impl_->name();
 }
 
-void Greeter::set_prefix(std::string prefix) {
-    impl_->set_prefix(std::move(prefix));
+std::string LibraryInfo::version() const {
+    return impl_->version();
 }
 
-}  // namespace yourlib
+std::string LibraryInfo::describe(std::string_view consumer) const {
+    return impl_->describe(consumer);
+}
+
+void LibraryInfo::set_name(std::string library_name) {
+    impl_->set_name(std::move(library_name));
+}
+
+} // namespace yourlib

@@ -1,16 +1,22 @@
 # Contributing
 
-## Development workflow
+## Scope
 
-1. Configure with a preset.
-2. Build the project.
-3. Run tests.
-4. Run formatting and static analysis before opening a pull request.
-5. Update documentation when behavior, build flow, or repository structure changes.
+This repository is a reusable C++23 library scaffold.
+Changes should preserve zero-touch reuse of the infrastructure: users should be able to add library sources under `src/` and tests under `tests/` without editing the build-system files.
 
-## Recommended commands
+## Contribution Baseline
 
-### CLI flow
+- keep the distributable header surface intentionally small
+- keep infrastructure generic rather than domain-specific
+- preserve package export, install, test, preset, and vcpkg flows
+- keep examples aligned with the installed consumer story
+- update docs when API, behavior, packaging, presets, or outputs change
+- update tests when fixing scaffold behavior or placeholder example behavior
+
+## Common Commands
+
+### Generic local debug flow
 
 ```bash
 cmake --preset dev-debug
@@ -18,24 +24,40 @@ cmake --build --preset dev-debug
 ctest --preset dev-debug
 ```
 
-### Windows flow
+### Generic local release flow
+
+```bash
+cmake --preset dev-release
+cmake --build --preset dev-release
+ctest --preset dev-release
+```
+
+### Windows MinGW
+
+```bash
+cmake --preset windows-mingw-debug
+cmake --build --preset windows-mingw-debug
+ctest --preset windows-mingw-debug
+```
+
+### Windows MSVC
+
+```bash
+cmake --preset windows-msvc-debug
+cmake --build --preset windows-msvc-debug
+ctest --preset windows-msvc-debug
+```
+
+### Interactive Windows helper
 
 ```bat
 project_manager.bat
 ```
 
-## Coding guidelines
+## Build And Packaging Rules
 
-- Keep the public API minimal and stable.
-- Prefer PIMPL when ABI stability or rebuild isolation matters.
-- Keep headers lightweight.
-- Add tests for behavioral changes.
-- Avoid introducing platform-specific assumptions into the public interface.
-- Keep build policy centralized in `cmake/` modules where practical.
-
-## Pull requests
-
-- Keep changes scoped.
-- Update documentation when behavior changes.
-- Add or update tests when fixing bugs or adding features.
-- Keep examples aligned with the installed-consumer story when public API changes.
+- all configured builds must stay under `build/<preset>`
+- do not introduce ad-hoc root build directories
+- preserve `your_library::your_library` as the default consumer target unless compatibility requires a deliberate change
+- keep `your_library` as the library/package identity and `your-library` as the vcpkg port name
+- keep the scaffold usable by adding source files only, without editing target file lists

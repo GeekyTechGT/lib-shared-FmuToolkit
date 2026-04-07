@@ -1,20 +1,18 @@
 # Examples
 
-The examples directory exists to prove consumer-facing usage, not to duplicate unit tests.
+The examples directory demonstrates consumer-facing use of `your_library`.
 
-## Current example
+## `minimal/`
 
-- `minimal/`: a downstream-style CMake project that calls `find_package(your_library REQUIRED)` and links `your_library::your_library`
+This example demonstrates the installed-package workflow expected for downstream applications:
 
-## What the minimal example proves
+- include the public header `#include <yourlib/yourlib.hpp>`
+- consume the exported target `your_library::your_library`
+- compile against the installable package config rather than private implementation files
 
-- install/export metadata is generated correctly
-- the package can be found by another CMake project
-- the public header layout is usable from a consumer executable
+Consumer CMake integration:
 
-## Typical usage
-
-1. Configure and build the library.
-2. Install it with `cmake --install` or with the deploy option from `project_manager.bat`.
-3. Point a consumer project at the installed package prefix.
-4. Build the example or an equivalent downstream application.
+```cmake
+find_package(your_library CONFIG REQUIRED)
+target_link_libraries(app PRIVATE your_library::your_library)
+```

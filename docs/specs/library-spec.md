@@ -1,29 +1,15 @@
-# Library Specification
+# Library Scaffold Specification
 
-## Scope
+## Functional Requirements
 
-The scaffold provides a small but complete example of a reusable C++ library repository. It is expected to demonstrate:
+- the scaffold must configure, build, test, install, and package without modification
+- users must be able to add implementation `.cpp` files under `src/` without editing the top-level `CMakeLists.txt`
+- users must be able to add test `.cpp` files under `tests/` without editing `tests/CMakeLists.txt`
+- the scaffold must export an installable CMake package target
+- the scaffold must provide a working example consumer and a working test suite out of the box
 
-- a public API under `include/`
-- a hidden implementation under `src/`
-- build, test, and install support through CMake
-- downstream consumption through exported package metadata
-- Windows project orchestration through `project_manager.bat`
+## Non-Functional Requirements
 
-## Functional requirements
-
-- The repository shall build a library target named `your_library`.
-- The repository shall export an alias target `your_library::your_library`.
-- The public `Greeter` API shall allow greeting a name with a configurable prefix.
-- The repository shall provide at least one automated unit test for the public API.
-- The repository shall support `cmake --install` for downstream consumption.
-- The repository shall include at least one consumer example that uses `find_package(your_library REQUIRED)`.
-
-## Non-functional requirements
-
-- The project shall require CMake 3.25 or newer.
-- The project shall target C++23.
-- The public API shall remain separated from implementation details through PIMPL in the example.
-- Warning and sanitizer policy shall be centralized in reusable CMake modules.
-- The repository shall document developer workflows and repository purpose.
-- Local Windows development shall have a single menu-driven orchestration entry point.
+- the infrastructure must stay generic rather than domain-specific
+- builds must remain under `build/<preset>`
+- the scaffold must support multiple compiler families through presets and `vcpkg` triplets

@@ -1,21 +1,21 @@
 #pragma once
 
-#include "yourlib/yourlib.hpp"
-
 #include <string>
 #include <string_view>
 
 namespace yourlib {
 
-class Greeter::Impl final {
+class LibraryInfo::Impl final {
 public:
-    explicit Impl(std::string prefix_value);
+    explicit Impl(std::string library_name);
 
-    [[nodiscard]] std::string greet(std::string_view name) const;
-    void set_prefix(std::string prefix_value);
+    [[nodiscard]] std::string name() const;
+    [[nodiscard]] std::string version() const;
+    [[nodiscard]] std::string describe(std::string_view consumer) const;
+    void set_name(std::string library_name);
 
 private:
-    std::string prefix_;
+    std::string library_name_;
 };
 
-}  // namespace yourlib
+} // namespace yourlib
