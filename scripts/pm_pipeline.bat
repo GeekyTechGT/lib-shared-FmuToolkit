@@ -2,7 +2,7 @@
 setlocal
 
 set "PRESET=%~1"
-if "%PRESET%"=="" set "PRESET=dev-debug"
+if "%PRESET%"=="" set "PRESET=windows-mingw-debug"
 
 call "%~dp0pm_configure.bat" "%PRESET%"
 if errorlevel 1 exit /b %errorlevel%

@@ -10,289 +10,100 @@
             "name": "base",
             "hidden": true,
             "binaryDir": "${sourceDir}/build/${presetName}",
+            "generator": "Ninja",
             "cacheVariables": {
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-                "YOUR_LIBRARY_BUILD_SHARED": "ON",
-                "YOUR_LIBRARY_BUILD_STATIC": "ON",
-                "YOUR_LIBRARY_BUILD_TESTS": "ON",
-                "YOUR_LIBRARY_ENABLE_WARNINGS": "ON",
-                "YOUR_LIBRARY_ENABLE_WERROR": "OFF",
-                "YOUR_LIBRARY_ENABLE_SANITIZERS": "OFF",
-                "YOUR_LIBRARY_MINGW_STATIC_RUNTIME": "ON"
-            }
-        },
-        {
-            "name": "ninja-base",
-            "hidden": true,
-            "inherits": "base",
-            "generator": "Ninja"
-        },
-        {
-            "name": "vcpkg-base",
-            "hidden": true,
-            "inherits": "ninja-base",
-            "cacheVariables": {
-                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-                "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets"
-            }
-        },
-        {
-            "name": "dev-debug",
-            "displayName": "Developer Debug",
-            "inherits": "ninja-base",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "YOUR_LIBRARY_ENABLE_SANITIZERS": "ON"
-            }
-        },
-        {
-            "name": "dev-release",
-            "displayName": "Developer Release",
-            "inherits": "ninja-base",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release"
-            }
-        },
-        {
-            "name": "vcpkg-debug",
-            "displayName": "Developer Debug (vcpkg)",
-            "inherits": "vcpkg-base",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "YOUR_LIBRARY_ENABLE_SANITIZERS": "ON"
-            }
-        },
-        {
-            "name": "vcpkg-release",
-            "displayName": "Developer Release (vcpkg)",
-            "inherits": "vcpkg-base",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release"
+                "LIB_FMU_TOOLKIT_BUILD_SHARED": "ON",
+                "LIB_FMU_TOOLKIT_BUILD_STATIC": "ON",
+                "LIB_FMU_TOOLKIT_BUILD_TESTS": "ON",
+                "LIB_FMU_TOOLKIT_BUILD_EXAMPLES": "ON",
+                "LIB_FMU_TOOLKIT_ENABLE_WARNINGS": "ON",
+                "LIB_FMU_TOOLKIT_ENABLE_WERROR": "OFF",
+                "LIB_FMU_TOOLKIT_ENABLE_SANITIZERS": "OFF",
+                "LIB_FMU_TOOLKIT_MINGW_STATIC_RUNTIME": "ON"
             }
         },
         {
             "name": "linux-gcc-debug",
             "displayName": "Linux GCC Debug",
-            "inherits": "dev-debug",
+            "inherits": "base",
             "condition": {
                 "type": "equals",
                 "lhs": "${hostSystemName}",
                 "rhs": "Linux"
             },
             "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "LIB_FMU_TOOLKIT_ENABLE_SANITIZERS": "ON",
+                "CMAKE_CXX_COMPILER": "/usr/bin/g++"
+            }
+        },
+        {
+            "name": "linux-gcc-release",
+            "displayName": "Linux GCC Release",
+            "inherits": "base",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            },
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
                 "CMAKE_CXX_COMPILER": "/usr/bin/g++"
             }
         },
         {
             "name": "linux-clang-debug",
             "displayName": "Linux Clang Debug",
-            "inherits": "dev-debug",
+            "inherits": "base",
             "condition": {
                 "type": "equals",
                 "lhs": "${hostSystemName}",
                 "rhs": "Linux"
             },
             "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "LIB_FMU_TOOLKIT_ENABLE_SANITIZERS": "ON",
                 "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
-            }
-        },
-        {
-            "name": "linux-gcc-vcpkg-debug",
-            "displayName": "Linux GCC Debug (vcpkg)",
-            "inherits": "vcpkg-debug",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Linux"
-            },
-            "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "/usr/bin/g++",
-                "VCPKG_TARGET_TRIPLET": "x64-linux-gcc"
-            }
-        },
-        {
-            "name": "linux-clang-vcpkg-debug",
-            "displayName": "Linux Clang Debug (vcpkg)",
-            "inherits": "vcpkg-debug",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Linux"
-            },
-            "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
-                "VCPKG_TARGET_TRIPLET": "x64-linux-clang"
-            }
-        },
-        {
-            "name": "linux-gcc-release",
-            "displayName": "Linux GCC Release",
-            "inherits": "dev-release",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Linux"
-            },
-            "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "/usr/bin/g++"
             }
         },
         {
             "name": "linux-clang-release",
             "displayName": "Linux Clang Release",
-            "inherits": "dev-release",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Linux"
-            },
-            "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
-            }
-        },
-        {
-            "name": "linux-gcc-vcpkg-release",
-            "displayName": "Linux GCC Release (vcpkg)",
-            "inherits": "vcpkg-release",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Linux"
-            },
-            "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "/usr/bin/g++",
-                "VCPKG_TARGET_TRIPLET": "x64-linux-gcc"
-            }
-        },
-        {
-            "name": "linux-clang-vcpkg-release",
-            "displayName": "Linux Clang Release (vcpkg)",
-            "inherits": "vcpkg-release",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Linux"
-            },
-            "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
-                "VCPKG_TARGET_TRIPLET": "x64-linux-clang"
-            }
-        },
-        {
-            "name": "windows-msvc-debug",
-            "displayName": "Windows MSVC Debug",
             "inherits": "base",
-            "generator": "Ninja",
             "condition": {
                 "type": "equals",
                 "lhs": "${hostSystemName}",
-                "rhs": "Windows"
+                "rhs": "Linux"
             },
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_CXX_COMPILER": "$env{VCToolsInstallDir}bin/Hostx64/x64/cl.exe",
-                "CMAKE_MAKE_PROGRAM": "C:/eng_apps/msys64/mingw64/bin/ninja.exe"
-            },
-            "environment": {
-                "PATH": "C:/eng_apps/msys64/mingw64/bin;$penv{PATH}"
-            }
-        },
-        {
-            "name": "windows-msvc-vcpkg-debug",
-            "displayName": "Windows MSVC Debug (vcpkg)",
-            "inherits": "vcpkg-debug",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Windows"
-            },
-            "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "$env{VCToolsInstallDir}bin/Hostx64/x64/cl.exe",
-                "CMAKE_MAKE_PROGRAM": "C:/eng_apps/msys64/mingw64/bin/ninja.exe",
-                "VCPKG_TARGET_TRIPLET": "x64-windows"
-            },
-            "environment": {
-                "PATH": "C:/eng_apps/msys64/mingw64/bin;$penv{PATH}"
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
             }
         },
         {
             "name": "windows-mingw-debug",
             "displayName": "Windows MinGW Debug",
-            "inherits": "dev-debug",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Windows"
-            },
-            "environment": {
-                "PATH": "C:/eng_apps/msys64/mingw64/bin;C:/eng_apps/msys64/usr/bin;$penv{PATH}"
-            },
-            "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "C:/eng_apps/msys64/mingw64/bin/g++.exe",
-                "CMAKE_MAKE_PROGRAM": "C:/eng_apps/msys64/mingw64/bin/ninja.exe",
-                "YOUR_LIBRARY_ENABLE_SANITIZERS": "OFF"
-            }
-        },
-        {
-            "name": "windows-mingw-vcpkg-debug",
-            "displayName": "Windows MinGW Debug (vcpkg)",
-            "inherits": "vcpkg-debug",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Windows"
-            },
-            "environment": {
-                "PATH": "C:/eng_apps/msys64/mingw64/bin;C:/eng_apps/msys64/usr/bin;$penv{PATH}"
-            },
-            "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "C:/eng_apps/msys64/mingw64/bin/g++.exe",
-                "CMAKE_MAKE_PROGRAM": "C:/eng_apps/msys64/mingw64/bin/ninja.exe",
-                "YOUR_LIBRARY_ENABLE_SANITIZERS": "OFF",
-                "VCPKG_TARGET_TRIPLET": "x64-mingw-dynamic"
-            }
-        },
-        {
-            "name": "windows-msvc-release",
-            "displayName": "Windows MSVC Release",
             "inherits": "base",
-            "generator": "Ninja",
             "condition": {
                 "type": "equals",
                 "lhs": "${hostSystemName}",
                 "rhs": "Windows"
-            },
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_CXX_COMPILER": "$env{VCToolsInstallDir}bin/Hostx64/x64/cl.exe",
-                "CMAKE_MAKE_PROGRAM": "C:/eng_apps/msys64/mingw64/bin/ninja.exe"
             },
             "environment": {
-                "PATH": "C:/eng_apps/msys64/mingw64/bin;$penv{PATH}"
-            }
-        },
-        {
-            "name": "windows-msvc-vcpkg-release",
-            "displayName": "Windows MSVC Release (vcpkg)",
-            "inherits": "vcpkg-release",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Windows"
+                "PATH": "C:/eng_apps/msys64/mingw64/bin;C:/eng_apps/msys64/usr/bin;$penv{PATH}"
             },
             "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "$env{VCToolsInstallDir}bin/Hostx64/x64/cl.exe",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_COMPILER": "C:/eng_apps/msys64/mingw64/bin/g++.exe",
                 "CMAKE_MAKE_PROGRAM": "C:/eng_apps/msys64/mingw64/bin/ninja.exe",
-                "VCPKG_TARGET_TRIPLET": "x64-windows"
-            },
-            "environment": {
-                "PATH": "C:/eng_apps/msys64/mingw64/bin;$penv{PATH}"
+                "LIB_FMU_TOOLKIT_ENABLE_SANITIZERS": "OFF"
             }
         },
         {
             "name": "windows-mingw-release",
             "displayName": "Windows MinGW Release",
-            "inherits": "dev-release",
+            "inherits": "base",
             "condition": {
                 "type": "equals",
                 "lhs": "${hostSystemName}",
@@ -302,32 +113,15 @@
                 "PATH": "C:/eng_apps/msys64/mingw64/bin;C:/eng_apps/msys64/usr/bin;$penv{PATH}"
             },
             "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
                 "CMAKE_CXX_COMPILER": "C:/eng_apps/msys64/mingw64/bin/g++.exe",
                 "CMAKE_MAKE_PROGRAM": "C:/eng_apps/msys64/mingw64/bin/ninja.exe"
             }
         },
         {
-            "name": "windows-mingw-vcpkg-release",
-            "displayName": "Windows MinGW Release (vcpkg)",
-            "inherits": "vcpkg-release",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Windows"
-            },
-            "environment": {
-                "PATH": "C:/eng_apps/msys64/mingw64/bin;C:/eng_apps/msys64/usr/bin;$penv{PATH}"
-            },
-            "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "C:/eng_apps/msys64/mingw64/bin/g++.exe",
-                "CMAKE_MAKE_PROGRAM": "C:/eng_apps/msys64/mingw64/bin/ninja.exe",
-                "VCPKG_TARGET_TRIPLET": "x64-mingw-dynamic"
-            }
-        },
-        {
             "name": "windows-clang-debug",
             "displayName": "Windows Clang Debug",
-            "inherits": "dev-debug",
+            "inherits": "base",
             "condition": {
                 "type": "equals",
                 "lhs": "${hostSystemName}",
@@ -337,32 +131,15 @@
                 "PATH": "C:/eng_apps/msys64/clang64/bin;C:/eng_apps/msys64/usr/bin;$penv{PATH}"
             },
             "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_CXX_COMPILER": "C:/eng_apps/msys64/clang64/bin/clang++.exe",
                 "CMAKE_MAKE_PROGRAM": "C:/eng_apps/msys64/clang64/bin/ninja.exe"
-            }
-        },
-        {
-            "name": "windows-clang-vcpkg-debug",
-            "displayName": "Windows Clang Debug (vcpkg)",
-            "inherits": "vcpkg-debug",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Windows"
-            },
-            "environment": {
-                "PATH": "C:/eng_apps/msys64/clang64/bin;C:/eng_apps/msys64/usr/bin;$penv{PATH}"
-            },
-            "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "C:/eng_apps/msys64/clang64/bin/clang++.exe",
-                "CMAKE_MAKE_PROGRAM": "C:/eng_apps/msys64/clang64/bin/ninja.exe",
-                "VCPKG_TARGET_TRIPLET": "x64-mingw-clang-dynamic"
             }
         },
         {
             "name": "windows-clang-release",
             "displayName": "Windows Clang Release",
-            "inherits": "dev-release",
+            "inherits": "base",
             "condition": {
                 "type": "equals",
                 "lhs": "${hostSystemName}",
@@ -372,180 +149,50 @@
                 "PATH": "C:/eng_apps/msys64/clang64/bin;C:/eng_apps/msys64/usr/bin;$penv{PATH}"
             },
             "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
                 "CMAKE_CXX_COMPILER": "C:/eng_apps/msys64/clang64/bin/clang++.exe",
                 "CMAKE_MAKE_PROGRAM": "C:/eng_apps/msys64/clang64/bin/ninja.exe"
-            }
-        },
-        {
-            "name": "windows-clang-vcpkg-release",
-            "displayName": "Windows Clang Release (vcpkg)",
-            "inherits": "vcpkg-release",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Windows"
-            },
-            "environment": {
-                "PATH": "C:/eng_apps/msys64/clang64/bin;C:/eng_apps/msys64/usr/bin;$penv{PATH}"
-            },
-            "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "C:/eng_apps/msys64/clang64/bin/clang++.exe",
-                "CMAKE_MAKE_PROGRAM": "C:/eng_apps/msys64/clang64/bin/ninja.exe",
-                "VCPKG_TARGET_TRIPLET": "x64-mingw-clang-dynamic"
             }
         }
     ],
     "buildPresets": [
         {
-            "name": "dev-debug",
-            "configurePreset": "dev-debug"
-        },
-        {
-            "name": "dev-release",
-            "configurePreset": "dev-release"
-        },
-        {
-            "name": "vcpkg-debug",
-            "configurePreset": "vcpkg-debug"
-        },
-        {
-            "name": "vcpkg-release",
-            "configurePreset": "vcpkg-release"
-        },
-        {
             "name": "linux-gcc-debug",
             "configurePreset": "linux-gcc-debug"
-        },
-        {
-            "name": "linux-clang-debug",
-            "configurePreset": "linux-clang-debug"
-        },
-        {
-            "name": "linux-gcc-vcpkg-debug",
-            "configurePreset": "linux-gcc-vcpkg-debug"
-        },
-        {
-            "name": "linux-clang-vcpkg-debug",
-            "configurePreset": "linux-clang-vcpkg-debug"
         },
         {
             "name": "linux-gcc-release",
             "configurePreset": "linux-gcc-release"
         },
         {
+            "name": "linux-clang-debug",
+            "configurePreset": "linux-clang-debug"
+        },
+        {
             "name": "linux-clang-release",
             "configurePreset": "linux-clang-release"
-        },
-        {
-            "name": "linux-gcc-vcpkg-release",
-            "configurePreset": "linux-gcc-vcpkg-release"
-        },
-        {
-            "name": "linux-clang-vcpkg-release",
-            "configurePreset": "linux-clang-vcpkg-release"
-        },
-        {
-            "name": "windows-msvc-debug",
-            "configurePreset": "windows-msvc-debug"
-        },
-        {
-            "name": "windows-msvc-vcpkg-debug",
-            "configurePreset": "windows-msvc-vcpkg-debug"
         },
         {
             "name": "windows-mingw-debug",
             "configurePreset": "windows-mingw-debug"
         },
         {
-            "name": "windows-mingw-vcpkg-debug",
-            "configurePreset": "windows-mingw-vcpkg-debug"
-        },
-        {
-            "name": "windows-msvc-release",
-            "configurePreset": "windows-msvc-release"
-        },
-        {
-            "name": "windows-msvc-vcpkg-release",
-            "configurePreset": "windows-msvc-vcpkg-release"
-        },
-        {
             "name": "windows-mingw-release",
             "configurePreset": "windows-mingw-release"
-        },
-        {
-            "name": "windows-mingw-vcpkg-release",
-            "configurePreset": "windows-mingw-vcpkg-release"
         },
         {
             "name": "windows-clang-debug",
             "configurePreset": "windows-clang-debug"
         },
         {
-            "name": "windows-clang-vcpkg-debug",
-            "configurePreset": "windows-clang-vcpkg-debug"
-        },
-        {
             "name": "windows-clang-release",
             "configurePreset": "windows-clang-release"
-        },
-        {
-            "name": "windows-clang-vcpkg-release",
-            "configurePreset": "windows-clang-vcpkg-release"
         }
     ],
     "testPresets": [
         {
-            "name": "dev-debug",
-            "configurePreset": "dev-debug",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "dev-release",
-            "configurePreset": "dev-release",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "vcpkg-debug",
-            "configurePreset": "vcpkg-debug",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "vcpkg-release",
-            "configurePreset": "vcpkg-release",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
             "name": "linux-gcc-debug",
             "configurePreset": "linux-gcc-debug",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "linux-clang-debug",
-            "configurePreset": "linux-clang-debug",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "linux-gcc-vcpkg-debug",
-            "configurePreset": "linux-gcc-vcpkg-debug",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "linux-clang-vcpkg-debug",
-            "configurePreset": "linux-clang-vcpkg-debug",
             "output": {
                 "outputOnFailure": true
             }
@@ -558,36 +205,15 @@
             }
         },
         {
+            "name": "linux-clang-debug",
+            "configurePreset": "linux-clang-debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
             "name": "linux-clang-release",
             "configurePreset": "linux-clang-release",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "linux-gcc-vcpkg-release",
-            "configurePreset": "linux-gcc-vcpkg-release",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "linux-clang-vcpkg-release",
-            "configurePreset": "linux-clang-vcpkg-release",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "windows-msvc-debug",
-            "configurePreset": "windows-msvc-debug",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "windows-msvc-vcpkg-debug",
-            "configurePreset": "windows-msvc-vcpkg-debug",
             "output": {
                 "outputOnFailure": true
             }
@@ -600,36 +226,8 @@
             }
         },
         {
-            "name": "windows-mingw-vcpkg-debug",
-            "configurePreset": "windows-mingw-vcpkg-debug",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "windows-msvc-release",
-            "configurePreset": "windows-msvc-release",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "windows-msvc-vcpkg-release",
-            "configurePreset": "windows-msvc-vcpkg-release",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
             "name": "windows-mingw-release",
             "configurePreset": "windows-mingw-release",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "windows-mingw-vcpkg-release",
-            "configurePreset": "windows-mingw-vcpkg-release",
             "output": {
                 "outputOnFailure": true
             }
@@ -642,22 +240,8 @@
             }
         },
         {
-            "name": "windows-clang-vcpkg-debug",
-            "configurePreset": "windows-clang-vcpkg-debug",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
             "name": "windows-clang-release",
             "configurePreset": "windows-clang-release",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "windows-clang-vcpkg-release",
-            "configurePreset": "windows-clang-vcpkg-release",
             "output": {
                 "outputOnFailure": true
             }

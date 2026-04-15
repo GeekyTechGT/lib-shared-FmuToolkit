@@ -1,9 +1,11 @@
 {
-    "name": "your-library",
-    "version-string": "0.1.0",
-    "description": "Reusable C++23 library scaffold with installable package exports, examples, tests, and vcpkg support",
+    "name": "lib-fmu-toolkit",
+    "version-string": "1.0.0",
+    "description": "C++ toolkit for loading, parsing, validating, and simulating FMI 2.0/3.0 FMUs.",
     "license": "MIT",
     "dependencies": [
+        "libxml2",
+        "libzip",
         "gtest"
     ]
 }

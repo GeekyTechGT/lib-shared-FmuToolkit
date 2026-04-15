@@ -4,7 +4,7 @@ setlocal
 set "PRESET=%~1"
 set "BUILD_DIR=%~2"
 
-if "%PRESET%"=="" set "PRESET=dev-debug"
+if "%PRESET%"=="" set "PRESET=windows-mingw-debug"
 if "%BUILD_DIR%"=="" set "BUILD_DIR=build\%PRESET%"
 
 call "%~dp0pm_clean.bat" "%BUILD_DIR%"

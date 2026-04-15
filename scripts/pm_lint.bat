@@ -2,7 +2,7 @@
 setlocal
 
 set "BUILD_DIR=%~1"
-if "%BUILD_DIR%"=="" set "BUILD_DIR=build\dev-debug"
+if "%BUILD_DIR%"=="" set "BUILD_DIR=build\windows-mingw-debug"
 
 where clang-tidy >nul 2>nul
 if errorlevel 1 (

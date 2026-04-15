@@ -5,7 +5,7 @@ set "CURRENT_PRESET=%~1"
 set "BUILD_DIR=%~2"
 set "DEPLOY_DIR=%~3"
 
-if "%CURRENT_PRESET%"=="" set "CURRENT_PRESET=dev-debug"
+if "%CURRENT_PRESET%"=="" set "CURRENT_PRESET=windows-mingw-debug"
 if "%BUILD_DIR%"=="" set "BUILD_DIR=build\%CURRENT_PRESET%"
 if "%DEPLOY_DIR%"=="" set "DEPLOY_DIR=deploy\%CURRENT_PRESET%"
 

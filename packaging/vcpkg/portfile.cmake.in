@@ -7,14 +7,14 @@ vcpkg_from_git(
 vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}"
     OPTIONS
-        -DYOUR_LIBRARY_BUILD_TESTS=OFF
-        -DYOUR_LIBRARY_ENABLE_WARNINGS=OFF
-        -DYOUR_LIBRARY_ENABLE_WERROR=OFF
-        -DYOUR_LIBRARY_ENABLE_SANITIZERS=OFF
+        -DLIB_FMU_TOOLKIT_BUILD_TESTS=OFF
+        -DLIB_FMU_TOOLKIT_ENABLE_WARNINGS=OFF
+        -DLIB_FMU_TOOLKIT_ENABLE_WERROR=OFF
+        -DLIB_FMU_TOOLKIT_ENABLE_SANITIZERS=OFF
 )
 
 vcpkg_cmake_install()
-vcpkg_cmake_config_fixup(CONFIG_PATH lib/cmake/your_library)
+vcpkg_cmake_config_fixup(CONFIG_PATH lib/cmake/lib_fmu_toolkit)
 vcpkg_copy_pdbs()
 
 file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")

@@ -23,7 +23,7 @@ set "COMMIT_MESSAGE=%~4"
 if "%COMMIT_MESSAGE%"=="" set "COMMIT_MESSAGE=%VCPKG_REGISTRY_COMMIT_MESSAGE%"
 if not defined VCPKG_PORT_HOMEPAGE set "VCPKG_PORT_HOMEPAGE=%SOURCE_REPOSITORY%"
 if not defined PORT_LICENSE set "PORT_LICENSE=MIT"
-if not defined PORT_DESCRIPTION set "PORT_DESCRIPTION=Professional C++23 library scaffold with PIMPL install export support and tests"
+if not defined PORT_DESCRIPTION set "PORT_DESCRIPTION=State-of-the-art C++ FMI 2.0/3.0 toolkit library"
 
 if "%REGISTRY_REPO%"=="" (
     echo Missing registry repository path.

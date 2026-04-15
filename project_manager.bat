@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  Project Manager - your_library scaffold
+REM  Project Manager - lib-fmu-toolkit
 REM ============================================================
 
 setlocal enabledelayedexpansion
@@ -17,7 +17,7 @@ set "PROJECT_ROOT=%~dp0"
 if "%PROJECT_ROOT:~-1%"=="\" set "PROJECT_ROOT=%PROJECT_ROOT:~0,-1%"
 
 set "SCRIPTS_DIR=%PROJECT_ROOT%\scripts"
-set "CURRENT_PRESET=dev-debug"
+set "CURRENT_PRESET=windows-mingw-debug"
 set "BUILD_ROOT=%PROJECT_ROOT%\build"
 set "DEPLOY_ROOT=%PROJECT_ROOT%\deploy"
 
@@ -51,7 +51,7 @@ call :update_paths
 cls
 echo.
 echo !CYAN!======================================================!RESET!
-echo !CYAN!         your_library - Project Manager!RESET!
+echo !CYAN!         lib-fmu-toolkit - Project Manager!RESET!
 echo !CYAN!======================================================!RESET!
 echo.
 echo   !BLUE!Current Context!RESET!

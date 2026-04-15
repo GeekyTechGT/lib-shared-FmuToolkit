@@ -1,16 +1,17 @@
 {
-  "default-registry": {
-    "kind": "builtin",
-    "baseline": "<builtin-vcpkg-baseline-commit>"
-  },
-  "registries": [
-    {
-      "kind": "git",
-      "repository": "https://github.com/<org>/<registry-repo>.git",
-      "baseline": "<custom-registry-baseline-commit>",
-      "packages": [
-        "your-library"
-      ]
-    }
-  ]
+    "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg-configuration.schema.json",
+    "default-registry": {
+        "kind": "builtin",
+        "baseline": "<fill-with-your-vcpkg-baseline>"
+    },
+    "registries": [
+        {
+            "kind": "git",
+            "repository": "<fill-with-your-private-registry-url>",
+            "baseline": "<fill-with-registry-commit>",
+            "packages": [
+                "lib-fmu-toolkit"
+            ]
+        }
+    ]
 }
