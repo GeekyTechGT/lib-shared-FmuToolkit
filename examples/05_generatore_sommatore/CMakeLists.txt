@@ -1,0 +1,1 @@
+lib_fmu_toolkit_configure_example(example_05_generatore_sommatore main.cpp)

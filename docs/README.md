@@ -1,27 +1,54 @@
-# Documentation
+# Documentation Index
 
-This directory contains the long-lived technical documentation for the scaffold.
+This directory contains the technical documentation for `lib-fmu-toolkit`.
 
-## Reading order
+## Requirements
 
-1. `architecture/overview.md`
-2. `architecture/design.md`
-3. `reference/api-reference.md`
-4. `specs/library-spec.md`
-5. `process/build.md`
-6. `process/dependencies.md`
-7. `process/customer-vcpkg-consumption.md`
-8. `process/release.md`
-9. `adr/0001-use-pimpl.md`
+| Document | Description |
+| --- | --- |
+| [requirements/srs.md](requirements/srs.md) | Software Requirements Specification — functional and non-functional requirements |
 
-## Document map
+## Architecture
 
-- `architecture/overview.md`: repository structure, zero-touch reuse expectations, and public/private boundaries
-- `architecture/design.md`: rationale for the placeholder API, PIMPL, install surface, and package model
-- `reference/api-reference.md`: API reference for the placeholder scaffold surface
-- `process/build.md`: CMake presets, build layout, install flow, test flow, Docker, and Windows scripts
-- `process/dependencies.md`: compiler, toolchain, test, and packaging dependencies
-- `process/customer-vcpkg-consumption.md`: customer-app integration flow through the private vcpkg registry
-- `process/release.md`: versioning, changelog, install validation, and private distribution notes
-- `specs/library-spec.md`: scaffold functional and non-functional expectations
-- `adr/`: architecture decisions
+| Document | Description |
+| --- | --- |
+| [architecture/architecture.md](architecture/architecture.md) | Layer map, class responsibilities, data-flow diagrams |
+
+## Reference
+
+| Document | Description |
+| --- | --- |
+| [reference/api_reference.md](reference/api_reference.md) | Complete public API reference (FmuEngine, FmuSession, types, exceptions) |
+| [reference/validation.md](reference/validation.md) | Three-phase validation pipeline: checks, error messages, test data |
+
+## Standards
+
+| Document | Description |
+| --- | --- |
+| [standards/fmi2_standard.md](standards/fmi2_standard.md) | FMI 2.0 archive structure, XML schema, lifecycle, function signatures |
+| [standards/fmi3_standard.md](standards/fmi3_standard.md) | FMI 3.0 archive structure, new types, lifecycle, differences from FMI 2.0 |
+
+## Build
+
+| Document | Description |
+| --- | --- |
+| [build/build.md](build/build.md) | Build presets, CMake options, dependency resolution, Qt6 integration |
+
+## Architecture Decision Records
+
+| ADR | Decision |
+| --- | --- |
+| [adr/0001-hexagonal-architecture.md](adr/0001-hexagonal-architecture.md) | Why hexagonal architecture (Ports & Adapters) |
+| [adr/0002-pimpl-public-api.md](adr/0002-pimpl-public-api.md) | Why PIMPL for the public API |
+| [adr/0003-cross-platform-toolchains-only.md](adr/0003-cross-platform-toolchains-only.md) | Why MSVC is not supported |
+| [adr/0004-three-phase-fmu-validation.md](adr/0004-three-phase-fmu-validation.md) | Why validation runs all three phases unconditionally |
+| [adr/0005-abi-stability-source-distribution.md](adr/0005-abi-stability-source-distribution.md) | ABI stability mitigations for source-distributed C++ (string_view, out-of-line methods, ABI pin) |
+
+## External Standards
+
+The FMI specifications and XSD schemas are included as git submodules:
+
+| Path | Content |
+| --- | --- |
+| `external/fmi-standard-2.0/` | FMI 2.0 specification, headers, and XSD schemas |
+| `external/fmi-standard-3.0/` | FMI 3.0 specification, headers, and XSD schemas |

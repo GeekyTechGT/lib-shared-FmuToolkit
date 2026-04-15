@@ -1,0 +1,1 @@
+lib_fmu_toolkit_configure_example(example_03_validate_fmu main.cpp)

@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.25)
+
+add_executable(example_06_batch_validate main.cpp)
+target_link_libraries(example_06_batch_validate PRIVATE ${LIB_FMU_TOOLKIT_EXAMPLE_TARGET})
+target_compile_features(example_06_batch_validate PRIVATE cxx_std_20)
+lib_fmu_toolkit_apply_options(example_06_batch_validate)
+lib_fmu_toolkit_apply_mingw_static_runtime(example_06_batch_validate)
