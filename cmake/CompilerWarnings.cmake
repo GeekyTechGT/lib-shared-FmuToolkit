@@ -1,4 +1,4 @@
-function(your_library_enable_warnings target)
+function(lib_fmu_toolkit_enable_warnings target)
     if(MSVC)
         target_compile_options(
             ${target}
@@ -26,7 +26,7 @@ function(your_library_enable_warnings target)
         )
     endif()
 
-    if(YOUR_LIBRARY_ENABLE_WERROR)
+    if(LIB_FMU_TOOLKIT_ENABLE_WERROR)
         if(MSVC)
             target_compile_options(${target} PRIVATE /WX)
         else()

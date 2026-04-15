@@ -1,0 +1,7 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/lib_fmu_toolkitTargets.cmake")
+
+set(lib_fmu_toolkit_SCHEMA_BASE_DIR "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_DATADIR@/lib-fmu-toolkit/schemas")
+
+check_required_components(lib_fmu_toolkit)

@@ -1,10 +1,10 @@
 include("${CMAKE_CURRENT_LIST_DIR}/CompilerWarnings.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/Sanitizers.cmake")
 
-function(your_library_apply_options target)
-    if(YOUR_LIBRARY_ENABLE_WARNINGS)
-        your_library_enable_warnings(${target})
+function(lib_fmu_toolkit_apply_options target)
+    if(LIB_FMU_TOOLKIT_ENABLE_WARNINGS)
+        lib_fmu_toolkit_enable_warnings(${target})
     endif()
 
-    your_library_enable_sanitizers(${target})
+    lib_fmu_toolkit_enable_sanitizers(${target})
 endfunction()

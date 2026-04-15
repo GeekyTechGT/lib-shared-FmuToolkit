@@ -1,27 +1,28 @@
 cmake_minimum_required(VERSION 3.25)
 
 project(
-    your_library
-    VERSION 0.1.0
-    DESCRIPTION "Reusable C++23 library scaffold with installable CMake package, tests, examples, and vcpkg support"
+    lib_fmu_toolkit
+    VERSION 1.0.0
+    DESCRIPTION "C++ toolkit for loading, parsing, validating, and simulating FMI 2.0/3.0 FMUs"
     LANGUAGES CXX
 )
 
 include(GNUInstallDirs)
 
-option(YOUR_LIBRARY_BUILD_SHARED "Build the shared library target" ON)
-option(YOUR_LIBRARY_BUILD_STATIC "Build the static library target" ON)
-option(YOUR_LIBRARY_BUILD_TESTS "Build unit tests" ON)
-option(YOUR_LIBRARY_ENABLE_WARNINGS "Enable strict warning flags" ON)
-option(YOUR_LIBRARY_ENABLE_WERROR "Treat warnings as errors" OFF)
-option(YOUR_LIBRARY_ENABLE_SANITIZERS "Enable sanitizers for supported debug builds" OFF)
-option(YOUR_LIBRARY_MINGW_STATIC_RUNTIME "Statically link MinGW C++ runtime libraries when using MinGW" ON)
+option(LIB_FMU_TOOLKIT_BUILD_SHARED "Build the shared library target" ON)
+option(LIB_FMU_TOOLKIT_BUILD_STATIC "Build the static library target" ON)
+option(LIB_FMU_TOOLKIT_BUILD_TESTS "Build unit and integration tests" ON)
+option(LIB_FMU_TOOLKIT_BUILD_EXAMPLES "Build minimal example applications" ON)
+option(LIB_FMU_TOOLKIT_ENABLE_WARNINGS "Enable strict warning flags" ON)
+option(LIB_FMU_TOOLKIT_ENABLE_WERROR "Treat warnings as errors" OFF)
+option(LIB_FMU_TOOLKIT_ENABLE_SANITIZERS "Enable sanitizers for supported debug builds" OFF)
+option(LIB_FMU_TOOLKIT_MINGW_STATIC_RUNTIME "Statically link MinGW C++ runtime libraries when using MinGW" ON)
 
-if(NOT YOUR_LIBRARY_BUILD_SHARED AND NOT YOUR_LIBRARY_BUILD_STATIC)
-    message(FATAL_ERROR "At least one of YOUR_LIBRARY_BUILD_SHARED or YOUR_LIBRARY_BUILD_STATIC must be ON")
+if(NOT LIB_FMU_TOOLKIT_BUILD_SHARED AND NOT LIB_FMU_TOOLKIT_BUILD_STATIC)
+    message(FATAL_ERROR "At least one of LIB_FMU_TOOLKIT_BUILD_SHARED or LIB_FMU_TOOLKIT_BUILD_STATIC must be ON")
 endif()
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -32,34 +33,137 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}"
 
 include(cmake/ProjectOptions.cmake)
 
-file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated/yourlib")
+function(lib_fmu_toolkit_apply_mingw_static_runtime target_name)
+    if(MINGW AND LIB_FMU_TOOLKIT_MINGW_STATIC_RUNTIME)
+        target_link_options(
+            ${target_name}
+            PRIVATE
+                -static-libgcc
+                -static-libstdc++
+                -Wl,-Bstatic
+                -lwinpthread
+                -Wl,-Bdynamic
+        )
+    endif()
+endfunction()
+
+find_package(LibXml2 REQUIRED)
+find_package(PkgConfig REQUIRED)
+
+set(LIB_FMU_TOOLKIT_EXTRA_INCLUDE_DIRS "")
+set(LIB_FMU_TOOLKIT_EXTRA_LINK_DIRS "")
+set(LIB_FMU_TOOLKIT_EXTRA_COMPILE_DEFINITIONS "")
+set(LIB_FMU_TOOLKIT_EXTRA_LINK_OPTIONS "")
+set(LIB_FMU_TOOLKIT_EXTRA_LINK_LIBS "")
+set(LIB_FMU_TOOLKIT_EXTRA_SYSTEM_LINK_LIBS "")
+set(LIB_FMU_TOOLKIT_XML_LINK_LIBS LibXml2::LibXml2)
+
+if(MINGW AND LIB_FMU_TOOLKIT_MINGW_STATIC_RUNTIME)
+    pkg_check_modules(LIBXML2_PKG REQUIRED IMPORTED_TARGET libxml-2.0)
+    pkg_check_modules(LIBZIP_PKG REQUIRED IMPORTED_TARGET libzip)
+
+    set(LIB_FMU_TOOLKIT_EXTRA_INCLUDE_DIRS
+        ${LIBXML2_PKG_INCLUDE_DIRS}
+        ${LIBZIP_PKG_INCLUDE_DIRS}
+    )
+    set(LIB_FMU_TOOLKIT_EXTRA_COMPILE_DEFINITIONS LIBXML_STATIC ZIP_STATIC)
+    set(LIB_FMU_TOOLKIT_XML_LINK_LIBS "")
+    set(LIB_FMU_TOOLKIT_LIBZIP_TARGET "")
+
+    set(_lib_fmu_toolkit_static_lib_names
+        ${LIBXML2_PKG_STATIC_LIBRARIES}
+        ${LIBZIP_PKG_STATIC_LIBRARIES}
+    )
+    list(REMOVE_DUPLICATES _lib_fmu_toolkit_static_lib_names)
+
+    set(_lib_fmu_toolkit_windows_system_libs
+        advapi32
+        bcrypt
+        crypt32
+        gdi32
+        iphlpapi
+        kernel32
+        ncrypt
+        netapi32
+        ole32
+        oleaut32
+        rpcrt4
+        secur32
+        shell32
+        user32
+        userenv
+        uuid
+        version
+        winhttp
+        wininet
+        winmm
+        ws2_32
+    )
+
+    foreach(_lib_name IN LISTS _lib_fmu_toolkit_static_lib_names)
+        if(_lib_name IN_LIST _lib_fmu_toolkit_windows_system_libs)
+            list(APPEND LIB_FMU_TOOLKIT_EXTRA_SYSTEM_LINK_LIBS ${_lib_name})
+            continue()
+        endif()
+        set(_lib_fmu_toolkit_static_archive "")
+        foreach(_lib_dir IN LISTS LIBXML2_PKG_STATIC_LIBRARY_DIRS LIBZIP_PKG_STATIC_LIBRARY_DIRS)
+            if(EXISTS "${_lib_dir}/lib${_lib_name}.a")
+                set(_lib_fmu_toolkit_static_archive "${_lib_dir}/lib${_lib_name}.a")
+                break()
+            endif()
+            if(EXISTS "${_lib_dir}/${_lib_name}.a")
+                set(_lib_fmu_toolkit_static_archive "${_lib_dir}/${_lib_name}.a")
+                break()
+            endif()
+        endforeach()
+        if(_lib_fmu_toolkit_static_archive)
+            list(APPEND LIB_FMU_TOOLKIT_EXTRA_LINK_LIBS ${_lib_fmu_toolkit_static_archive})
+        else()
+            list(APPEND LIB_FMU_TOOLKIT_EXTRA_LINK_LIBS ${_lib_name})
+        endif()
+    endforeach()
+    list(REMOVE_DUPLICATES LIB_FMU_TOOLKIT_EXTRA_SYSTEM_LINK_LIBS)
+else()
+    find_package(unofficial-libzip CONFIG QUIET)
+    if(unofficial-libzip_FOUND)
+        set(LIB_FMU_TOOLKIT_LIBZIP_TARGET unofficial::libzip::libzip)
+    else()
+        pkg_check_modules(LIBZIP REQUIRED IMPORTED_TARGET libzip)
+        set(LIB_FMU_TOOLKIT_LIBZIP_TARGET PkgConfig::LIBZIP)
+    endif()
+endif()
+
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated/libfmu_toolkit")
 configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/yourlib/version.hpp.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/generated/yourlib/version.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/libfmu_toolkit/version.hpp.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/generated/libfmu_toolkit/version.hpp"
     @ONLY
 )
 
-file(GLOB_RECURSE YOUR_LIBRARY_SOURCE_FILES CONFIGURE_DEPENDS
+file(GLOB_RECURSE LIB_FMU_TOOLKIT_SOURCE_FILES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
 )
 
-if(NOT YOUR_LIBRARY_SOURCE_FILES)
+if(NOT LIB_FMU_TOOLKIT_SOURCE_FILES)
     message(FATAL_ERROR "No library source files were found under src/.")
 endif()
 
-set(YOUR_LIBRARY_PUBLIC_HEADERS
-    include/yourlib/yourlib.hpp
-    include/yourlib/export.hpp
-    "${CMAKE_CURRENT_BINARY_DIR}/generated/yourlib/version.hpp"
+set(LIB_FMU_TOOLKIT_PUBLIC_HEADERS
+    include/libfmu_toolkit/export.hpp
+    include/libfmu_toolkit/exceptions.hpp
+    include/libfmu_toolkit/fmu_engine.hpp
+    include/libfmu_toolkit/lib_fmu_toolkit.hpp
+    include/libfmu_toolkit/types.hpp
+    "${CMAKE_CURRENT_BINARY_DIR}/generated/libfmu_toolkit/version.hpp"
 )
 
-function(your_library_configure_library target_name library_type)
+function(lib_fmu_toolkit_configure_library target_name library_type)
     add_library(${target_name} ${library_type})
 
     target_sources(
         ${target_name}
         PRIVATE
-            ${YOUR_LIBRARY_SOURCE_FILES}
+            ${LIB_FMU_TOOLKIT_SOURCE_FILES}
         PUBLIC
             FILE_SET public_headers
             TYPE HEADERS
@@ -67,7 +171,7 @@ function(your_library_configure_library target_name library_type)
                 "${CMAKE_CURRENT_SOURCE_DIR}/include"
                 "${CMAKE_CURRENT_BINARY_DIR}/generated"
             FILES
-                ${YOUR_LIBRARY_PUBLIC_HEADERS}
+                ${LIB_FMU_TOOLKIT_PUBLIC_HEADERS}
     )
 
     target_include_directories(
@@ -78,13 +182,35 @@ function(your_library_configure_library target_name library_type)
             "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
         PRIVATE
             "${CMAKE_CURRENT_SOURCE_DIR}/src"
+            ${LIB_FMU_TOOLKIT_EXTRA_INCLUDE_DIRS}
     )
 
-    target_compile_features(${target_name} PUBLIC cxx_std_23)
+    target_compile_features(${target_name} PUBLIC cxx_std_20)
+
+    # Pin the libstdc++ C++11 ABI (non-COW string/list ABI introduced in GCC 5).
+    # Without this, code compiled with _GLIBCXX_USE_CXX11_ABI=0 (e.g. legacy
+    # GCC4 environments or old distro packages) would silently use a different
+    # std::string layout, causing heap corruption across the library boundary.
+    # This propagates to consumers via target_link_libraries() so they remain
+    # ABI-consistent with the library.
+    # On Windows/MinGW the same libstdc++ ABI switch applies; on MSVC this
+    # define is unknown and harmless (the MSVC block is never reached anyway
+    # due to ADR-0003).
+    if(NOT MSVC)
+        target_compile_definitions(${target_name} PUBLIC _GLIBCXX_USE_CXX11_ABI=1)
+    endif()
+
+    if(library_type STREQUAL "STATIC")
+        set(_lib_fmu_toolkit_dependency_scope PUBLIC)
+    else()
+        set(_lib_fmu_toolkit_dependency_scope PRIVATE)
+    endif()
 
     set_target_properties(
         ${target_name}
         PROPERTIES
+            OUTPUT_NAME "lib-fmu-toolkit"
+            PREFIX ""
             VERSION "${PROJECT_VERSION}"
             SOVERSION "${PROJECT_VERSION_MAJOR}"
             CXX_VISIBILITY_PRESET hidden
@@ -92,96 +218,120 @@ function(your_library_configure_library target_name library_type)
     )
 
     if(library_type STREQUAL "SHARED")
-        set_target_properties(
+        target_compile_definitions(
             ${target_name}
-            PROPERTIES
-                OUTPUT_NAME "your_library"
-                EXPORT_NAME your_library
-        )
-        if(WIN32)
-            target_compile_definitions(
-                ${target_name}
-                PUBLIC YOUR_LIBRARY_SHARED
-                PRIVATE YOUR_LIBRARY_BUILDING_SHARED
-            )
-        endif()
-    else()
-        set_target_properties(
-            ${target_name}
-            PROPERTIES
-                OUTPUT_NAME "your_library_static"
-                EXPORT_NAME your_library_static
+            PUBLIC LIB_FMU_TOOLKIT_SHARED
+            PRIVATE LIB_FMU_TOOLKIT_BUILDING_SHARED
         )
     endif()
 
-    your_library_apply_options(${target_name})
+    target_compile_definitions(
+        ${target_name}
+        PRIVATE
+            LIB_FMU_TOOLKIT_SOURCE_EXTERNAL_DIR="${CMAKE_CURRENT_SOURCE_DIR}/external"
+            ${LIB_FMU_TOOLKIT_EXTRA_COMPILE_DEFINITIONS}
+    )
+
+    target_link_directories(
+        ${target_name}
+        ${_lib_fmu_toolkit_dependency_scope}
+            ${LIB_FMU_TOOLKIT_EXTRA_LINK_DIRS}
+    )
+
+    target_link_options(
+        ${target_name}
+        ${_lib_fmu_toolkit_dependency_scope}
+            ${LIB_FMU_TOOLKIT_EXTRA_LINK_OPTIONS}
+    )
+
+    target_link_libraries(
+        ${target_name}
+        ${_lib_fmu_toolkit_dependency_scope}
+            ${LIB_FMU_TOOLKIT_XML_LINK_LIBS}
+            ${LIB_FMU_TOOLKIT_LIBZIP_TARGET}
+            ${LIB_FMU_TOOLKIT_EXTRA_LINK_LIBS}
+            ${LIB_FMU_TOOLKIT_EXTRA_SYSTEM_LINK_LIBS}
+            ${CMAKE_DL_LIBS}
+    )
+
+    lib_fmu_toolkit_apply_options(${target_name})
+    lib_fmu_toolkit_apply_mingw_static_runtime(${target_name})
 endfunction()
 
-set(_your_library_primary_target "")
-set(_your_library_install_targets "")
+set(_lib_fmu_toolkit_primary_target "")
+set(_lib_fmu_toolkit_install_targets "")
 
-if(YOUR_LIBRARY_BUILD_SHARED)
-    your_library_configure_library(your_library_shared SHARED)
-    add_library(your_library::your_library_shared ALIAS your_library_shared)
-    list(APPEND _your_library_install_targets your_library_shared)
-    if(NOT _your_library_primary_target)
-        set(_your_library_primary_target your_library_shared)
+if(LIB_FMU_TOOLKIT_BUILD_SHARED)
+    lib_fmu_toolkit_configure_library(lib_fmu_toolkit_shared SHARED)
+    add_library(lib_fmu_toolkit::shared ALIAS lib_fmu_toolkit_shared)
+    list(APPEND _lib_fmu_toolkit_install_targets lib_fmu_toolkit_shared)
+    if(NOT _lib_fmu_toolkit_primary_target)
+        set(_lib_fmu_toolkit_primary_target lib_fmu_toolkit_shared)
     endif()
 endif()
 
-if(YOUR_LIBRARY_BUILD_STATIC)
-    your_library_configure_library(your_library_static STATIC)
-    add_library(your_library::your_library_static ALIAS your_library_static)
-    list(APPEND _your_library_install_targets your_library_static)
-    if(NOT _your_library_primary_target)
-        set(_your_library_primary_target your_library_static)
+if(LIB_FMU_TOOLKIT_BUILD_STATIC)
+    lib_fmu_toolkit_configure_library(lib_fmu_toolkit_static STATIC)
+    add_library(lib_fmu_toolkit::static ALIAS lib_fmu_toolkit_static)
+    list(APPEND _lib_fmu_toolkit_install_targets lib_fmu_toolkit_static)
+    if(NOT _lib_fmu_toolkit_primary_target)
+        set(_lib_fmu_toolkit_primary_target lib_fmu_toolkit_static)
     endif()
 endif()
 
-add_library(your_library::your_library ALIAS ${_your_library_primary_target})
+add_library(lib_fmu_toolkit::lib_fmu_toolkit ALIAS ${_lib_fmu_toolkit_primary_target})
 
 install(
-    TARGETS ${_your_library_install_targets}
-    EXPORT your_libraryTargets
+    TARGETS ${_lib_fmu_toolkit_install_targets}
+    EXPORT lib_fmu_toolkitTargets
     FILE_SET public_headers
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
     LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
 )
 
+install(
+    DIRECTORY
+        "${CMAKE_CURRENT_SOURCE_DIR}/external/fmi-standard-2.0"
+        "${CMAKE_CURRENT_SOURCE_DIR}/external/fmi-standard-3.0"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/lib-fmu-toolkit/schemas"
+)
+
 include(CMakePackageConfigHelpers)
 
 write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/your_libraryConfigVersion.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/lib_fmu_toolkitConfigVersion.cmake"
     VERSION "${PROJECT_VERSION}"
     COMPATIBILITY SameMajorVersion
 )
 
 configure_package_config_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/your_libraryConfig.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/your_libraryConfig.cmake"
-    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/your_library"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/lib_fmu_toolkitConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/lib_fmu_toolkitConfig.cmake"
+    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/lib_fmu_toolkit"
 )
 
 install(
-    EXPORT your_libraryTargets
-    FILE your_libraryTargets.cmake
-    NAMESPACE your_library::
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/your_library"
+    EXPORT lib_fmu_toolkitTargets
+    FILE lib_fmu_toolkitTargets.cmake
+    NAMESPACE lib_fmu_toolkit::
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/lib_fmu_toolkit"
 )
 
 install(
     FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/your_libraryConfig.cmake"
-        "${CMAKE_CURRENT_BINARY_DIR}/your_libraryConfigVersion.cmake"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/your_library"
+        "${CMAKE_CURRENT_BINARY_DIR}/lib_fmu_toolkitConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/lib_fmu_toolkitConfigVersion.cmake"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/lib_fmu_toolkit"
 )
 
-if(YOUR_LIBRARY_BUILD_TESTS)
+if(LIB_FMU_TOOLKIT_BUILD_TESTS)
     include(CTest)
     if(BUILD_TESTING)
         add_subdirectory(tests)
     endif()
 endif()
 
-add_subdirectory(examples/minimal)
+if(LIB_FMU_TOOLKIT_BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()

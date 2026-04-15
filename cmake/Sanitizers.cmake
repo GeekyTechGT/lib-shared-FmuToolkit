@@ -1,5 +1,5 @@
-function(your_library_enable_sanitizers target)
-    if(NOT YOUR_LIBRARY_ENABLE_SANITIZERS)
+function(lib_fmu_toolkit_enable_sanitizers target)
+    if(NOT LIB_FMU_TOOLKIT_ENABLE_SANITIZERS)
         return()
     endif()
 
