@@ -1,4 +1,0 @@
-CompileFlags:
-  CompilationDatabase: build/dev-debug
-Diagnostics:
-  UnusedIncludes: Strict

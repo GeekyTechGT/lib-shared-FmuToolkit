@@ -7,7 +7,6 @@
 
 # CMake
 CMakeUserPresets.json
-scripts/vcpkg_registry_config.bat
 CMakeCache.txt
 CMakeFiles/
 cmake-build-*/
@@ -47,4 +46,6 @@ coverage.xml
 
 # Python helper environment
 .venv/
+pyvenv/
 __pycache__/
+*.pyc

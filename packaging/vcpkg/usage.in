@@ -1,4 +1,0 @@
-@PORT_NAME@ provides CMake targets:
-
-    find_package(lib_fmu_toolkit CONFIG REQUIRED)
-    target_link_libraries(main PRIVATE lib_fmu_toolkit::lib_fmu_toolkit)

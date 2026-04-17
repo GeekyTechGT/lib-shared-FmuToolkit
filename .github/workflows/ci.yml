@@ -15,13 +15,13 @@ jobs:
       - name: Install toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build g++ clang cmake
+          sudo apt-get install -y ninja-build g++ cmake pkg-config libxml2-dev libzip-dev
 
       - name: Configure
-        run: cmake --preset linux-gcc-debug
+        run: cmake --preset linux-mingw-debug
 
       - name: Build
-        run: cmake --build --preset linux-gcc-debug
+        run: cmake --build --preset linux-mingw-debug
 
       - name: Test
-        run: ctest --preset linux-gcc-debug
+        run: ctest --test-dir build/linux-mingw-debug --output-on-failure

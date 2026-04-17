@@ -5,883 +5,1114 @@
 [![FMI 2.0](https://img.shields.io/badge/FMI-2.0-green.svg)](https://svn.modelica.org/fmi/branches/public/specifications/v2.0/)
 [![FMI 3.0](https://img.shields.io/badge/FMI-3.0-brightgreen.svg)](https://svn.modelica.org/fmi/branches/public/specifications/v3.0/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey.svg)](https://fmi-standard.org/)
-[![vcpkg](https://img.shields.io/badge/vcpkg-compatible-blueviolet.svg)](https://vcpkg.io/)
 
-A production-grade, header-clean C++ library for loading, parsing, validating, and simulating
-[Functional Mock-up Units (FMUs)](https://fmi-standard.org/) following both the **FMI 2.0** and
-**FMI 3.0** co-simulation standards.
-
-`lib-fmu-toolkit` was extracted and generalised from the `fmu-studio` and `fmu-forge` toolchain
-projects. It is designed to be embeddable as a static or shared library, consumable via vcpkg
-private registries, and architecturally clean enough to serve as a foundation for higher-level
-simulation frameworks and Qt6-based GUI applications.
+A C++20 library for loading, parsing, validating, and co-simulating FMI 2.0 and FMI 3.0
+Functional Mock-up Units (FMUs). Designed as the installable, ABI-stable C++ alternative to
+FMPy.
 
 ---
 
 ## Table of Contents
 
-1. [Features](#features)
+1. [Overview](#overview)
 2. [Architecture](#architecture)
 3. [Repository Layout](#repository-layout)
-4. [Test Data](#test-data)
-5. [Dependencies](#dependencies)
-6. [Building](#building)
-7. [Toolchain Support](#toolchain-support)
-8. [Consuming via CMake](#consuming-via-cmake)
-9. [Consuming via vcpkg](#consuming-via-vcpkg)
-10. [API Overview](#api-overview)
-11. [FMU Validation In Depth](#fmu-validation-in-depth)
-12. [Examples](#examples)
-13. [Runtime XSD Schema Discovery](#runtime-xsd-schema-discovery)
-14. [Build Options](#build-options)
-15. [Testing](#testing)
-16. [Documentation](#documentation)
-17. [Contributing](#contributing)
+4. [Prerequisites](#prerequisites)
+   - [Windows](#windows)
+   - [Linux / WSL](#linux--wsl)
+   - [Docker](#docker)
+5. [Quick Start — Windows](#quick-start--windows)
+6. [Quick Start — Linux / WSL](#quick-start--linux--wsl)
+7. [Quick Start — Docker](#quick-start--docker)
+8. [Project Metadata — project.json](#project-metadata--projectjson)
+9. [Python Virtual Environment — pyvenv](#python-virtual-environment--pyvenv)
+10. [Project Manager — project_manager.py](#project-manager--project_managerpy)
+11. [CMake Presets](#cmake-presets)
+12. [CMake Options](#cmake-options)
+13. [Shared Library Dependencies — _shared_lib](#shared-library-dependencies--_shared_lib)
+14. [Deploy Layout](#deploy-layout)
+15. [Runtime Distribution](#runtime-distribution)
+16. [FMU Test Data and Cross-Platform Binaries](#fmu-test-data-and-cross-platform-binaries)
+17. [Running the Tests](#running-the-tests)
+18. [Running the Examples](#running-the-examples)
+19. [Library Public API](#library-public-api)
+20. [Building Manually with CMake](#building-manually-with-cmake)
+21. [CI — GitHub Actions](#ci--github-actions)
+22. [Troubleshooting](#troubleshooting)
 
 ---
 
-## Features
+## Overview
 
-- **Full FMI 2.0 and FMI 3.0 co-simulation support** — instantiate, initialize, step, terminate,
-  and free, following the complete lifecycle mandated by both standards. All variable data types
-  are supported: Real/Float32/Float64, Integer/Int8…Int64/UInt8…UInt64, Boolean, String, Binary,
-  Clock.
-
-- **ZIP archive extraction** — FMU archives are extracted transparently using libzip before the
-  shared library and XML descriptor are accessed. The extraction path is configurable.
-
-- **Comprehensive XML parsing** — `modelDescription.xml` is fully parsed for all standard
-  attributes:
-  - Model metadata: `modelName`, `guid` (FMI 2.0) / `instantiationToken` (FMI 3.0),
-    `fmiVersion`, `description`, `generationTool`, `generationDateAndTime`,
-    `variableNamingConvention`, `numberOfEventIndicators`.
-  - `ModelVariables`: causality, variability, initial, data type, start values, unit,
-    declaredType for every variable.
-  - `UnitDefinitions`: physical unit names with SI base-unit conversion factors and offsets.
-  - `TypeDefinitions` (FMI 2.0 `SimpleType` / FMI 3.0 `TypeDefinitions`): named types with
-    quantity, unit, displayUnit, min/max constraints.
-  - `DefaultExperiment`: recommended start time, stop time, step size, and tolerance.
-  - `LogCategories`: all declared logging categories.
-
-- **Three-phase FMU validation** — a single `validate()` call runs all three phases:
-  1. **Structure Phase** — checks the FMU archive layout against the FMI standard:
-     - `modelDescription.xml` must exist at the archive root.
-     - `binaries/` directory must be present.
-     - Binary subdirectory names must follow the naming convention for the declared FMI version:
-       - FMI 2.0: `win32`, `win64`, `linux32`, `linux64`, `darwin32`, `darwin64`
-       - FMI 3.0: `x86_64-windows`, `x86_64-linux`, `x86_64-darwin`, `aarch64-linux`, etc.
-     - A version mismatch (e.g. FMI 3.0-style directories inside an FMI 2.0 FMU) is an error.
-     - The shared library filename must match the `modelIdentifier` attribute.
-  2. **Schema Phase** — validates `modelDescription.xml` against the official FMI XSD schema
-     using libxml2, with line- and column-accurate error reporting.
-  3. **Semantic Phase** — checks invariants beyond what XSD covers: duplicate value references,
-     invalid causality/variability combinations, absence of output variables (warning).
-
-- **Co-simulation execution** — `SimulationController` drives the FMI co-simulation loop with:
-  - Configurable recording intervals (record every Nth step).
-  - Selective output variable recording (empty list = record all outputs).
-  - Initial parameter injection by variable name.
-  - Atomic cancellation mechanism (thread-safe).
-  - Progress callback for UI integration.
-
-- **Step-by-step session control** — `FmuSession` exposes `doStep()` / `setValue()` /
-  `getValue()` for scenarios where an external time coordinator (e.g., SIL-Kit, AUTOSAR,
-  co-simulation master, or Qt timer) drives the simulation clock.
-
-- **Result export** — `SimResult` can be exported to:
-  - **CSV** (RFC-4180 compliant, with string escaping).
-  - **JSON** (hand-written, no third-party JSON library dependency).
-
-- **Static and shared builds** — both `lib_fmu_toolkit_shared` and `lib_fmu_toolkit_static`
-  CMake targets are built from the same sources. The `lib_fmu_toolkit::lib_fmu_toolkit` alias
-  resolves to shared by default; consumers can target `::shared` or `::static` explicitly.
-
-- **Hexagonal architecture** — the public API is a thin PIMPL facade over a
-  domain/use-case/ports/adapters stack. No third-party types leak into public headers.
-
-- **Stable ABI surface** — public headers expose only standard C++ and the library's own
-  `LIB_FMU_TOOLKIT_API`-decorated types. libxml2, libzip, and all internal domain types are
-  entirely hidden behind the PIMPL boundary.
-
-- **Installable CMake package** — ships `lib_fmu_toolkitConfig.cmake`,
-  `lib_fmu_toolkitConfigVersion.cmake`, and `lib_fmu_toolkitTargets.cmake` for `find_package`
-  consumption by downstream projects, including Qt6-based applications.
-
-- **vcpkg private registry support** — the `packaging/vcpkg/` directory contains parameterised
-  portfile and manifest templates ready for private registry publication.
+| Feature | Status |
+|---|---|
+| FMI 2.0 co-simulation | ✓ full |
+| FMI 3.0 co-simulation | ✓ full — all scalar types (Float32/64, Int8–64, UInt8–64), Boolean, String, Binary, Clock |
+| XSD-validated `modelDescription.xml` | ✓ libxml2 |
+| CSV and JSON result export | ✓ |
+| Static C++ runtime (no `libstdc++.dll`) | ✓ MinGW (`-static-libgcc -static-libstdc++`) |
+| Windows build (32-bit and 64-bit) | ✓ MSYS2 MinGW |
+| Linux build | ✓ system GCC |
+| Docker build (Ubuntu 24.04) | ✓ |
+| WSL build | ✓ |
+| Qt ABI compatibility | ✓ MinGW only — Clang presets removed intentionally |
+| 103 tests, Windows + Docker | ✓ |
 
 ---
 
 ## Architecture
 
-The library follows a **hexagonal architecture** (Ports and Adapters) combined with the **PIMPL
-idiom** at the public API boundary. This separation ensures that:
+The library follows a **Hexagonal (Ports & Adapters)** architecture, keeping all platform
+and third-party details out of the domain core:
 
-- The **domain layer** (pure data structures and business rules) has zero dependencies on
-  third-party libraries.
-- The **use-case layer** orchestrates validation and simulation logic by depending only on
-  abstract port interfaces — never on concrete adapters.
-- The **adapter layer** contains all third-party library usage (libxml2, libzip, platform
-  DLL-loading APIs) and is invisible to consumers.
-- The **public API** (`FmuEngine`, `FmuSession`) exposes only standard C++ types, making it
-  trivially consumable from Qt and other frameworks without include-path entanglement.
+```
+include/                        ← Public API headers (deployed flat into include/)
+├── exceptions.hpp
+├── export.hpp
+├── fmu_engine.hpp
+├── lib_fmu_toolkit.hpp
+├── types.hpp
+└── version.hpp
 
-```text
-┌──────────────────────────────────────────────────────────────────────────────┐
-│  PUBLIC API  (include/libfmu_toolkit/)                                       │
-│                                                                              │
-│   FmuEngine ──PIMPL──► FmuEngine::Impl       FmuSession ──PIMPL──► Impl    │
-│   (fmu_engine.hpp)                                                           │
-│   types.hpp · exceptions.hpp · export.hpp · version.hpp                     │
-└──────────────────────────┬───────────────────────────────────────────────────┘
-                           │  (internal only — not shipped to consumers)
-┌──────────────────────────▼───────────────────────────────────────────────────┐
-│  USE CASES  (src/core/usecases/)                                             │
-│                                                                              │
-│   FmuImporter            FmuValidator          SimulationController          │
-│   CsvResultExporter      (uses IXmlValidator)  (uses ISimulationBackend)    │
-└────────┬─────────────────────────────────────────────────────────────────────┘
-         │  depends on port abstractions only
-┌────────▼─────────────────────────────────────────────────────────────────────┐
-│  DOMAIN  (src/core/domain/)                                                  │
-│                                                                              │
-│   FmuPackage · ModelVariable · SimulationConfig · SimulationResult           │
-│   ValidationReport · UnitDef · TypeDef · DomainDefaultExperiment            │
-└──────────────────────────────────────────────────────────────────────────────┘
-         ▲                ▲                ▲
-         │                │                │
-┌────────┴────┐  ┌────────┴──────┐  ┌─────┴───────────────────────────────────┐
-│  PORTS      │  │  PORTS        │  │  PORTS                                  │
-│             │  │               │  │                                         │
-│ IFmuLoader  │  │ IXmlValidator │  │ ISimulationBackend · IResultExporter    │
-└────────┬────┘  └────────┬──────┘  └─────┬───────────────────────────────────┘
-         │                │                │  (adapters implement ports)
-┌────────▼────┐  ┌────────▼──────┐  ┌─────▼───────────────────────────────────┐
-│  ADAPTERS   │  │  ADAPTERS     │  │  ADAPTERS                               │
-│             │  │               │  │                                         │
-│ ZipLoader-  │  │ Libxml2Vali-  │  │ StandaloneSimulation-   JsonResult-     │
-│ Adapter     │  │ datorAdapter  │  │ Adapter                 Exporter        │
-└─────────────┘  └───────────────┘  └─────────────────────────────────────────┘
+src/
+├── core/
+│   ├── domain/                 ← Pure domain entities: FmuPackage, ModelVariable, …
+│   ├── usecases/               ← FmuImporter, FmuValidator, SimulationController, exporters
+│   └── exceptions/             ← Internal exception hierarchy
+├── ports/                      ← Abstract interfaces: IFmuLoader, IXmlValidator, …
+├── adapters/
+│   ├── xml/                    ← libxml2 parser and validator
+│   ├── zip/                    ← libzip extractor
+│   ├── simulation/             ← FMI 2.0 and 3.0 dlopen adapter
+│   └── json/                   ← JSON result exporter (nlohmann/json, header-only)
+└── fmu_engine.cpp              ← PIMPL facade — the only file in the public boundary
 ```
 
-**Key design decisions:**
-
-- `FmuEngine` and `FmuSession` expose only `struct Impl;` forward declarations in their public
-  headers. The full `Impl` definitions — which include all heavy internal types — live exclusively
-  in `src/fmu_engine_impl.hpp` and are never installed.
-- All use-cases depend on port interfaces (`IXmlValidator`, `IFmuLoader`, `ISimulationBackend`,
-  `IResultExporter`), never on concrete adapters. This enables injecting test doubles or
-  alternative implementations without modifying any use-case code (Dependency Inversion Principle).
-- `SimulationController` builds a single `unordered_map<name, ModelVariable*>` index before the
-  simulation loop, giving O(1) variable lookup per step regardless of model size.
+All public API symbols are hidden by default (`-fvisibility=hidden`); only those annotated
+with `LIB_FMU_TOOLKIT_API` are exported. This prevents accidental ABI leakage.
 
 ---
 
 ## Repository Layout
 
-```text
+```
 lib-fmu-toolkit/
-├── include/libfmu_toolkit/       # Public API headers (installed)
-│   ├── export.hpp                # DLL export macros
-│   ├── exceptions.hpp            # Public exception hierarchy
-│   ├── fmu_engine.hpp            # FmuEngine and FmuSession declarations
-│   ├── lib_fmu_toolkit.hpp       # Umbrella include
-│   ├── types.hpp                 # All public data types
-│   └── version.hpp.in            # Version header template (configured by CMake)
-│
-├── src/                          # Private implementation (not installed)
-│   ├── fmu_engine.cpp            # FmuEngine and FmuSession method bodies
-│   ├── fmu_engine_impl.hpp       # Impl struct definitions (internal only)
-│   │
-│   ├── core/
-│   │   ├── domain/               # Pure domain entities (no third-party types)
-│   │   │   ├── fmu_package.hpp/.cpp
-│   │   │   ├── model_variable.hpp
-│   │   │   ├── fmu_variable_types.hpp
-│   │   │   ├── validation_report.hpp/.cpp
-│   │   │   ├── simulation_config.hpp
-│   │   │   ├── simulation_result.hpp
-│   │   │   └── log_category.hpp
-│   │   ├── exceptions/           # Internal exception types
-│   │   └── usecases/             # Application-layer orchestration
-│   │       ├── fmu_validator.hpp/.cpp      (three-phase validator)
-│   │       ├── fmu_importer.hpp/.cpp
-│   │       ├── simulation_controller.hpp/.cpp
-│   │       └── csv_result_exporter.hpp/.cpp
-│   │
-│   ├── ports/                    # Abstract port interfaces (dependency inversion)
-│   │   ├── i_fmu_loader.hpp
-│   │   ├── i_xml_validator.hpp
-│   │   ├── i_simulation_backend.hpp
-│   │   ├── i_result_exporter.hpp
-│   │   └── i_logger.hpp
-│   │
-│   └── adapters/                 # Concrete adapter implementations
-│       ├── xml/                  # Libxml2ValidatorAdapter, ModelDescriptionParser
-│       ├── zip/                  # ZipLoaderAdapter
-│       ├── simulation/           # StandaloneSimulationAdapter
-│       └── json/                 # JsonResultExporter
-│
+├── include/                    ← Public headers (deployed flat)
+├── src/                        ← Private implementation
 ├── tests/
-│   ├── CMakeLists.txt
-│   ├── data/                     # FMU fixtures for integration tests
-│   ├── unit/                     # GoogleTest unit tests
-│   └── integration/              # Integration tests (require real FMU binaries)
-│
-├── examples/
-│   ├── 01_basic_simulate/        # Load, configure, simulate, inspect results
-│   ├── 02_step_by_step/          # FmuSession manual step loop
-│   ├── 03_validate_fmu/          # Three-phase validation with detailed output
-│   ├── 04_export_results/        # CSV and JSON export side-by-side
-│   ├── 05_generatore_sommatore/  # Two-FMU orchestrated co-simulation
-│   └── 06_batch_validate/        # Batch validation of valid and corrupted FMUs
-│
-├── data/                         # Sample FMU archives (not linked by tests)
-│   ├── fmi2/
-│   │   ├── SimpleAdder.fmu               (valid FMI 2.0 stub, no binary)
-│   │   └── corrupted/
-│   │       ├── corrupted_xml.fmu         (malformed XML)
-│   │       ├── missing_binaries.fmu      (no binaries/ dir)
-│   │       ├── missing_model_desc.fmu    (no modelDescription.xml)
-│   │       └── wrong_platform_dir.fmu    (FMI 3.0 dir naming in FMI 2.0 FMU)
-│   └── fmi3/
-│       ├── Generatore.fmu                (valid FMI 3.0, real binary)
-│       ├── Sommatore.fmu                 (valid FMI 3.0, real binary)
-│       ├── SimpleRamp.fmu                (valid FMI 3.0 stub, no binary)
-│       └── corrupted/
-│           ├── corrupted_xml.fmu         (malformed XML)
-│           ├── missing_binaries.fmu      (no binaries/ dir)
-│           ├── missing_model_desc.fmu    (no modelDescription.xml)
-│           └── wrong_platform_dir.fmu    (FMI 2.0 dir naming in FMI 3.0 FMU)
-│
+│   ├── unit/
+│   ├── integration/
+│   └── data/                   ← Generatore.fmu, Sommatore.fmu (Win + Linux binaries)
+├── examples/                   ← 01–06 example applications
 ├── external/
-│   ├── fmi-standard-2.0/schema/  # FMI 2.0 XSD schemas (submodule)
-│   └── fmi-standard-3.0/schema/  # FMI 3.0 XSD schemas (submodule)
-│
+│   ├── fmi-standard-2.0/       ← FMI 2.0 XSD schemas + headers
+│   └── fmi-standard-3.0/       ← FMI 3.0 XSD schemas + headers
 ├── cmake/
-│   ├── lib_fmu_toolkitConfig.cmake.in
-│   ├── CompilerWarnings.cmake
 │   ├── ProjectOptions.cmake
-│   └── Sanitizers.cmake
-│
-├── packaging/vcpkg/              # vcpkg port templates for private registries
-├── triplets/                     # Custom vcpkg triplets
+│   ├── SharedLibDeps.cmake     ← Resolves _shared_lib dependencies
+│   └── lib_fmu_toolkitConfig.cmake.in
+├── scripts/
+│   ├── project_manager.py      ← Interactive TUI (replaces all .bat scripts)
+│   └── build_linux_fmu_binaries.py  ← Builds Linux .so files for test FMUs
+├── .github/workflows/ci.yml
 ├── CMakeLists.txt
-└── CMakePresets.json
+├── CMakePresets.json
+├── Dockerfile
+├── project.json                ← Project metadata (name, version, deploy paths)
+├── requirements.txt            ← Python deps (rich, colorama)
+└── VERSION                     ← Version string (must match project.json)
 ```
 
 ---
 
-## Test Data
+## Prerequisites
 
-The `data/` directory contains sample FMU archives organised by FMI version and validity status.
-They are intended for manual testing and demonstration — the automated test suite uses its own
-fixtures under `tests/data/`.
+### Windows
 
-### FMI 2.0 FMUs (`data/fmi2/`)
+| Tool | Required version | Default installation path |
+|---|---|---|
+| MSYS2 | latest | `C:\eng_apps\msys64\` |
+| MinGW-W64 64-bit toolchain | GCC ≥ 13 | `C:\eng_apps\msys64\mingw64\` |
+| MinGW-W32 32-bit toolchain | GCC ≥ 13 | `C:\eng_apps\msys64\mingw32\` (optional) |
+| CMake | ≥ 3.25 | `C:\eng_apps\cmake\cmake-4.2.0\` or in PATH |
+| Python | ≥ 3.10 | In PATH |
+| Docker Desktop | any | Required only for Docker presets |
+| WSL 2 | any | Required only for WSL presets |
 
-| File | Description |
-| --- | --- |
-| `SimpleAdder.fmu` | Valid FMI 2.0 co-simulation FMU. Contains `modelDescription.xml` and platform directories (`win64/`, `linux64/`, `darwin64/`) with placeholder binaries. No functional binary is included; it validates fully but cannot be simulated. |
-| `corrupted/corrupted_xml.fmu` | Intentionally malformed `modelDescription.xml`. The Schema phase reports a parse error. |
-| `corrupted/missing_binaries.fmu` | Archive with no `binaries/` directory. The Structure phase reports a missing directory error. |
-| `corrupted/missing_model_desc.fmu` | Archive with no `modelDescription.xml`. Fails at load time. |
-| `corrupted/wrong_platform_dir.fmu` | Valid FMI 2.0 XML, but the binary directory uses FMI 3.0-style naming (`x86_64-windows/` instead of `win64/`). The Structure phase reports a version-convention mismatch error. |
-
-### FMI 3.0 FMUs (`data/fmi3/`)
-
-| File | Description |
-| --- | --- |
-| `Generatore.fmu` | Valid FMI 3.0 co-simulation FMU (real binary). Implements a ramp: `y = t × 5.0`. Used by Example 05. |
-| `Sommatore.fmu` | Valid FMI 3.0 co-simulation FMU (real binary). Implements a two-input adder: `y = u1 + u2`. Used by Example 05. |
-| `SimpleRamp.fmu` | Valid FMI 3.0 stub. Contains `modelDescription.xml` and platform directories (`x86_64-windows/`, `x86_64-linux/`, `x86_64-darwin/`). No functional binary. |
-| `corrupted/corrupted_xml.fmu` | Intentionally malformed `modelDescription.xml`. Schema phase reports a parse error. |
-| `corrupted/missing_binaries.fmu` | Archive with no `binaries/` directory. Structure phase reports a missing directory error. |
-| `corrupted/missing_model_desc.fmu` | Archive with no `modelDescription.xml`. Fails at load time. |
-| `corrupted/wrong_platform_dir.fmu` | Valid FMI 3.0 XML, but the binary directory uses FMI 2.0-style naming (`win64/` instead of `x86_64-windows/`). Structure phase reports a version-convention mismatch error. |
-
-Use Example 06 to run the validator over all of these in one pass:
+**Install MSYS2 packages for the 64-bit toolchain** (open the *MSYS2 MinGW64* terminal):
 
 ```bash
-example_06_batch_validate data
+pacman -Syu   # update the package database first
+
+pacman -S mingw-w64-x86_64-gcc \
+          mingw-w64-x86_64-ninja \
+          mingw-w64-x86_64-cmake \
+          mingw-w64-x86_64-pkg-config \
+          mingw-w64-x86_64-libxml2 \
+          mingw-w64-x86_64-libzip
 ```
 
----
-
-## Dependencies
-
-| Dependency | Role | Minimum version |
-| --- | --- | --- |
-| [libxml2](https://gitlab.gnome.org/GNOME/libxml2) | XML DOM parsing and XSD schema validation | 2.9 |
-| [libzip](https://libzip.org/) | FMU ZIP archive extraction | 1.8 |
-| [GoogleTest](https://github.com/google/googletest) | Unit and integration tests | 1.12 |
-
-All three dependencies are resolved automatically when using vcpkg. Without vcpkg, they must be
-available as system packages (`apt`, `pacman`, `brew`) or discoverable via CMake's `find_package`
-or `PkgConfig`.
-
----
-
-## Building
-
-### Prerequisites
-
-- CMake ≥ 3.25
-- Ninja (strongly recommended; Make is also supported)
-- A C++20-capable compiler — see [Toolchain Support](#toolchain-support)
-- libxml2 and libzip (system packages or via vcpkg)
-
-### Quick start — Linux (system packages)
+**Install MSYS2 packages for the optional 32-bit toolchain** (open the *MSYS2 MinGW32* terminal):
 
 ```bash
-# Install dependencies (Ubuntu/Debian)
-sudo apt install libxml2-dev libzip-dev
-
-# Debug build with sanitizers
-cmake --preset linux-gcc-debug
-cmake --build --preset linux-gcc-debug
-ctest --preset linux-gcc-debug --output-on-failure
-
-# Release build
-cmake --preset linux-gcc-release
-cmake --build --preset linux-gcc-release
+pacman -S mingw-w64-i686-gcc \
+          mingw-w64-i686-ninja \
+          mingw-w64-i686-cmake \
+          mingw-w64-i686-pkg-config \
+          mingw-w64-i686-libxml2 \
+          mingw-w64-i686-libzip
 ```
 
-### Quick start — Linux (vcpkg)
+> **Important:** The project assumes MSYS2 is installed at `C:\eng_apps\msys64\`. If your
+> installation is elsewhere, update the `PATH` entries in `CMakePresets.json` and the
+> `_MINGW_*` constants in `scripts/project_manager.py`.
+
+### Linux / WSL
 
 ```bash
-export VCPKG_ROOT=/path/to/vcpkg
-cmake --preset linux-gcc-vcpkg-debug
-cmake --build --preset linux-gcc-vcpkg-debug
-ctest --preset linux-gcc-vcpkg-debug --output-on-failure
+sudo apt-get update && sudo apt-get install -y \
+    g++ \
+    ninja-build \
+    cmake \
+    pkg-config \
+    libxml2-dev \
+    libzip-dev \
+    python3 \
+    python3-venv \
+    python3-pip
 ```
 
-### Quick start — Windows (MinGW via MSYS2)
+Tested on Ubuntu 22.04 and 24.04. The minimum CMake version is 3.25; on older Ubuntu releases
+install it from the [official Kitware APT repository](https://apt.kitware.com/).
 
-```bat
-cmake --preset windows-mingw-debug
-cmake --build --preset windows-mingw-debug
-ctest --preset windows-mingw-debug --output-on-failure
+### Docker
+
+Only Docker Engine / Docker Desktop is required on the host machine. The `Dockerfile` at the
+project root builds a self-contained Ubuntu 24.04 image with all build dependencies:
+
+```bash
+# Build the image once (from the project root)
+docker build -t lib-fmu-toolkit-builder .
 ```
 
-### Quick start — Windows (MinGW + vcpkg)
-
-```bat
-set VCPKG_ROOT=C:\path\to\vcpkg
-cmake --preset windows-mingw-vcpkg-debug
-cmake --build --preset windows-mingw-vcpkg-debug
-ctest --preset windows-mingw-vcpkg-debug --output-on-failure
-```
-
-### Quick start — Windows (Clang via MSYS2)
-
-```bat
-cmake --preset windows-clang-debug
-cmake --build --preset windows-clang-debug
-```
-
-All `*-release` variants omit sanitizers and produce optimised binaries. All `*-vcpkg-*` variants
-read the toolchain file from `$VCPKG_ROOT` and resolve all dependencies automatically.
-
-### Using the Project Manager (Windows)
-
-The interactive `project_manager.bat` provides a menu-driven interface to all build operations:
-
-```bat
-project_manager.bat
-```
-
-Menu options:
-
-- **[1] Select Preset** — choose from all available presets
-- **[2] Configure** — run `cmake --preset`
-- **[3] Build** — run `cmake --build --preset`
-- **[4] Rebuild** — clean + configure + build
-- **[5] Clean** — remove the current build directory
-- **[6] Clean All** — remove all build directories
-- **[7] Run Tests** — run `ctest --preset`
-- **[8] Pipeline** — configure + build + test in one shot
-- **[9] clang-format** — format all source files
-- **[10] clang-tidy** — static analysis
-- **[11] Deploy** — `cmake --install`
-- **[13–15] vcpkg** — registry management
+The image installs: `g++`, `gcc`, `ninja-build`, `cmake`, `pkg-config`, `libxml2-dev`,
+`libzip-dev`, `python3`, `python3-venv`, `python3-pip`.
 
 ---
 
-## Toolchain Support
+## Quick Start — Windows
 
-Only cross-platform, open-source toolchains are supported. MSVC is intentionally excluded to
-keep the library buildable on both Windows and Linux with the same compiler family, which is a
-prerequisite for Qt6 integration (Qt's official packages for Windows ship with MinGW binaries).
-
-| Toolchain | Windows | Linux | Qt6 compatible |
-| --- | --- | --- | --- |
-| GCC (MSYS2 MinGW64 / system GCC) | ✔ (MinGW) | ✔ | ✔ |
-| Clang (MSYS2 clang64 / system Clang) | ✔ | ✔ | ✔ |
-
-### Qt6 integration
-
-When consuming this library from a Qt6 application, add the Qt installation to `CMAKE_PREFIX_PATH`
-before calling `find_package`:
-
-```cmake
-list(APPEND CMAKE_PREFIX_PATH "C:/Qt/6.x.y/mingw_64")
-find_package(Qt6 REQUIRED COMPONENTS Core)
-find_package(lib_fmu_toolkit CONFIG REQUIRED)
-
-target_link_libraries(my_qt_app
-    PRIVATE
-        Qt6::Core
-        lib_fmu_toolkit::lib_fmu_toolkit)
-```
-
-Or pass it on the command line:
+These instructions use a plain Windows terminal (cmd, PowerShell, or VS Code integrated
+terminal). You do **not** need to open an MSYS2 shell.
 
 ```bat
-cmake --preset windows-mingw-release -DCMAKE_PREFIX_PATH="C:/Qt/6.x.y/mingw_64"
+:: 1. Clone the repository
+git clone https://github.com/your-org/lib-fmu-toolkit.git
+cd lib-fmu-toolkit
+
+:: 2. Create the Python virtual environment
+python -m venv pyvenv
+
+:: 3. Activate it
+pyvenv\Scripts\activate
+
+:: 4. Install Python dependencies
+pip install -r requirements.txt
+
+:: 5. Launch the interactive project manager
+python scripts\project_manager.py
 ```
+
+Inside the project manager:
+
+1. Press **1** → select **windows-mingw64-debug** (or release)
+2. Press **2** → Configure
+3. Press **3** → Build
+4. Press **6** → Run tests (103 tests, all green)
+5. Press **7** → Deploy to `_shared_lib`
+6. Press **0** → Quit
+
+> **Why not use the MSYS2 shell?**
+> The project manager automatically prepends `C:\eng_apps\msys64\mingw64\bin` to the
+> subprocess PATH before invoking CMake and Ninja. This means MinGW's linker (`ld.exe`) and
+> support tools are always found correctly, regardless of which terminal you use.
 
 ---
 
-## Consuming via CMake
+## Quick Start — Linux / WSL
 
-After installing the library (`cmake --install`) or adding it as a subdirectory, use the standard
-`find_package` mechanism:
-
-```cmake
-find_package(lib_fmu_toolkit CONFIG REQUIRED)
-
-target_link_libraries(my_app
-    PRIVATE lib_fmu_toolkit::lib_fmu_toolkit)
-```
-
-The `lib_fmu_toolkit::lib_fmu_toolkit` alias resolves to the shared build when both targets are
-present. To target a specific flavour explicitly:
-
-```cmake
-target_link_libraries(my_app PRIVATE lib_fmu_toolkit::shared)
+```bash
+# In a Linux terminal or WSL session
+cd /mnt/d/GeekyTechRepos/lib-fmu-toolkit    # WSL path
 # or
-target_link_libraries(my_app PRIVATE lib_fmu_toolkit::static)
+cd ~/projects/lib-fmu-toolkit               # native Linux path
+
+# Install build tools (once per machine)
+sudo apt-get update && sudo apt-get install -y \
+    g++ ninja-build cmake pkg-config libxml2-dev libzip-dev \
+    python3 python3-venv python3-pip
+
+# Create the Python virtual environment
+python3 -m venv pyvenv
+source pyvenv/bin/activate
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Launch the project manager
+python scripts/project_manager.py
 ```
 
-Include the umbrella header to pull in all public types and the engine:
+Inside the project manager:
 
-```cpp
-#include <libfmu_toolkit/lib_fmu_toolkit.hpp>
-```
-
-Or include individual headers:
-
-```cpp
-#include <libfmu_toolkit/fmu_engine.hpp>   // FmuEngine, FmuSession
-#include <libfmu_toolkit/types.hpp>        // SimConfig, SimResult, FmuInfo, ...
-#include <libfmu_toolkit/exceptions.hpp>   // FmuLoadError, FmuSimulationError, ...
-```
+1. Press **1** → select **linux-mingw-debug** (or release)
+2. Press **2** → Configure
+3. Press **3** → Build
+4. Press **6** → Run tests
+5. Press **7** → Deploy
 
 ---
 
-## Consuming via vcpkg
+## Quick Start — Docker
 
-The `packaging/vcpkg/` directory contains templates for publishing this library as a vcpkg port
-in a private registry. Parameterise the templates, commit them to your registry, then add your
-registry URL to your consuming project's `vcpkg-configuration.json`:
+```bash
+# 1. Build the Docker image (one-time setup)
+docker build -t lib-fmu-toolkit-builder .
+
+# 2. Launch the project manager from Windows (cmd / PowerShell)
+python scripts\project_manager.py
+```
+
+Inside the project manager:
+
+1. Press **1** → select **docker-mingw-debug** (or release)
+2. Press **2** → Configure  *(cmake runs inside the container)*
+3. Press **3** → Build       *(cmake --build runs inside the container)*
+4. Press **6** → Run tests   *(ctest runs inside the container)*
+5. Press **7** → Deploy      *(cmake --install runs inside the container; output is copied to `_shared_lib`)*
+
+Alternatively, run cmake directly without the project manager:
+
+```bash
+# Windows — Docker Desktop volumes use forward slashes
+docker run --rm \
+    -v "D:/GeekyTechRepos/lib-fmu-toolkit:/workspace" \
+    -w /workspace \
+    lib-fmu-toolkit-builder \
+    bash -c "cmake --preset docker-mingw-debug && cmake --build build/docker-mingw-debug -- -j$(nproc)"
+
+# Run tests
+docker run --rm \
+    -v "D:/GeekyTechRepos/lib-fmu-toolkit:/workspace" \
+    lib-fmu-toolkit-builder \
+    ctest --test-dir /workspace/build/docker-mingw-debug --output-on-failure
+```
+
+> **Note for Windows users:** When running `docker run` from an MSYS2/Git Bash shell,
+> the shell may silently convert `/workspace` to a Windows path (e.g., `C:/Git/workspace`).
+> Always use the project manager or Python's `subprocess` module to invoke Docker — Python
+> does **not** perform this path conversion.
+
+---
+
+## Project Metadata — project.json
+
+`project.json` at the repository root is the single source of truth for project identity.
+It is read both by `scripts/project_manager.py` (Python `json.load`) and by
+`cmake/SharedLibDeps.cmake` (CMake `string(JSON)`):
 
 ```json
 {
-  "registries": [
-    {
-      "kind": "git",
-      "repository": "https://your-registry/vcpkg-registry.git",
-      "baseline": "<commit-sha>",
-      "packages": ["lib-fmu-toolkit"]
-    }
-  ]
+    "name":         "lib-fmu-toolkit",
+    "version":      "0.1.0",
+    "description":  "C++ toolkit for loading, parsing, validating, and simulating FMI 2.0/3.0 FMUs",
+    "license":      "MIT",
+    "deploy_folder":   "D:/GeekyTechRepos/_shared_lib",
+    "shared_lib_base": "D:/GeekyTechRepos/_shared_lib",
+    "docker_image":    "lib-fmu-toolkit-builder",
+    "dependencies": []
 }
 ```
 
-Then declare a dependency in `vcpkg.json`:
+| Field | Used by | Description |
+|---|---|---|
+| `name` | both | Library name; becomes part of the deploy path |
+| `version` | both | Must match the `VERSION` file at the repo root |
+| `deploy_folder` | Python | Root into which `cmake --install` writes artifacts |
+| `shared_lib_base` | CMake | Root from which dependency headers and archives are read |
+| `docker_image` | Python | Name of the Docker image used for Docker presets |
+| `dependencies` | CMake | Array of `{name, version}` objects declaring user-library deps |
 
-```json
-{
-  "dependencies": ["lib-fmu-toolkit"]
-}
-```
+> **Version synchronisation:** Whenever you bump the version, update **both** `project.json`
+> and the `VERSION` file. The CMake `project()` call reads `VERSION` at configure time via
+> `file(READ VERSION ...)`.
 
 ---
 
-## API Overview
+## Python Virtual Environment — pyvenv
 
-### FmuEngine — primary entry point
-
-`FmuEngine` manages one or more loaded FMUs identified by opaque `uint64_t` handles.
-
-```cpp
-libfmu_toolkit::FmuEngine engine;
-
-// Load: extracts ZIP, parses XML, loads shared library, resolves FMI symbols.
-uint64_t handle = engine.load("path/to/model.fmu");
-
-// Inspect metadata.
-libfmu_toolkit::FmuInfo info = engine.info(handle);
-std::cout << info.modelName << " [FMI "
-          << (info.fmiVersion == libfmu_toolkit::FmiVersion::FMI2 ? "2" : "3") << "]\n";
-
-// Enumerate variables.
-for (const auto* v : info.inputs())
-    std::cout << "input: " << v->name << " (" << v->unit << ")\n";
-
-// Access UnitDefinitions.
-for (const auto& unit : info.unitDefinitions)
-    std::cout << unit.name << ": factor=" << unit.factor << "\n";
-
-// Validate (three phases: structure + XSD schema + semantics).
-auto report = engine.validate(handle);
-if (!report.passed) {
-    for (const auto& err : report.errors)
-        std::cerr << "[" << err.line << ":" << err.column << "] " << err.message << "\n";
-}
-
-// Configure and run a co-simulation.
-libfmu_toolkit::SimConfig cfg;
-cfg.startTime         = 0.0;
-cfg.stopTime          = 10.0;
-cfg.stepSize          = 0.01;
-cfg.tolerance         = 1e-6;
-cfg.initialParameters["K"] = 2.5;              // set named parameter before run
-cfg.outputVariables   = {"position", "speed"}; // empty = record all outputs
-cfg.recordingInterval = 10;                    // record every 10th step
-
-auto result = engine.simulate(handle, cfg,
-    [](size_t step, double t, size_t total) {
-        std::cout << "t=" << t << " (" << step << "/" << total << ")\n";
-    });
-
-// Export results.
-libfmu_toolkit::FmuEngine::exportCsv(result,  "output.csv");
-libfmu_toolkit::FmuEngine::exportJson(result, "output.json");
-
-engine.unload(handle); // optional — destructor cleans up all handles
-```
-
-### FmuSession — step-by-step co-simulation
-
-`FmuSession` gives fine-grained control for external time coordinators (Qt timers, SIL-Kit,
-AUTOSAR middleware, etc.):
-
-```cpp
-libfmu_toolkit::SimConfig cfg;
-cfg.startTime = 0.0;
-cfg.stopTime  = 5.0;
-cfg.stepSize  = 0.01;
-
-auto session = engine.openSession(handle, cfg);
-
-double t = cfg.startTime;
-while (session.isActive() && t < cfg.stopTime) {
-    // Write inputs (must happen before doStep)
-    session.setValue("u", computeInput(t));
-
-    // Advance the FMU by one communication step
-    if (!session.doStep(t, cfg.stepSize)) break;
-
-    // Read outputs after the step
-    auto y = std::get<double>(session.getValue("y"));
-    recordOutput(t, y);
-
-    t += cfg.stepSize;
-}
-
-session.terminate(); // safe to call even if session is already inactive
-```
-
-### FmuInfo — metadata helpers
-
-```cpp
-auto info = engine.info(handle);
-
-// Convenience filters — return pointers into the variable list.
-auto inputs  = info.inputs();    // std::vector<const VariableInfo*>
-auto outputs = info.outputs();
-auto params  = info.parameters();
-
-// By-name lookup.
-const auto* var = info.findVariable("position"); // nullptr if not found
-
-// DefaultExperiment values.
-if (info.defaultExperiment.hasStopTime)
-    cfg.stopTime = info.defaultExperiment.stopTime;
-if (info.defaultExperiment.hasStepSize)
-    cfg.stepSize = info.defaultExperiment.stepSize;
-```
-
----
-
-## FMU Validation In Depth
-
-### Overview
-
-The `FmuValidator` implements three validation phases in a single `validate()` call. All phases
-run unconditionally, so you always receive the full diagnostic picture — not just the first
-problem found.
-
-```cpp
-auto result = engine.validate(handle);
-
-std::cout << (result.passed ? "PASSED" : "FAILED") << "\n";
-
-for (const auto& err : result.errors)
-    std::cout << "[" << categoryName(err.category) << "] " << err.message << "\n";
-
-for (const auto& warn : result.warnings)
-    std::cout << "[WARN] " << warn.message << "\n";
-```
-
-### Phase 1 — Structure
-
-Verifies that the FMU archive follows the directory layout mandated by the FMI standard.
-
-**FMI 2.0 required structure:**
-
-```text
-<FMU>/
-├── modelDescription.xml          ← mandatory
-└── binaries/                     ← mandatory
-    ├── win32/   or  win64/       ← platform-specific (at least one)
-    ├── linux32/ or  linux64/
-    └── darwin32/ or darwin64/
-```
-
-**FMI 3.0 required structure:**
-
-```text
-<FMU>/
-├── modelDescription.xml                 ← mandatory
-└── binaries/                            ← mandatory
-    ├── x86_64-windows/  (or x86-windows, aarch64-windows)
-    ├── x86_64-linux/    (or x86-linux, aarch64-linux)
-    └── x86_64-darwin/   (or aarch64-darwin)
-```
-
-**Version mismatch detection:** If an FMI 2.0 FMU contains only FMI 3.0-style directories (e.g.
-`x86_64-windows/` instead of `win64/`), or vice-versa, a structure **error** is raised. This
-catches a common mistake when exporting FMUs from tools that upgraded their naming convention.
-
-**Library naming:** The shared library inside the platform directory must be named
-`<modelIdentifier>.<ext>`. A mismatch produces a **warning**.
-
-### Phase 2 — Schema
-
-Validates `modelDescription.xml` against the official FMI XSD schema. The appropriate schema is
-selected automatically based on the `fmiVersion` attribute:
-
-- FMI 2.0 → `external/fmi-standard-2.0/schema/fmi2ModelDescription.xsd`
-- FMI 3.0 → `external/fmi-standard-3.0/schema/fmi3ModelDescription.xsd`
-
-Line and column numbers are included in all schema errors for precise navigation.
-
-### Phase 3 — Semantics
-
-Checks variable-model invariants that cannot be expressed in XSD:
-
-| Check | Severity |
-| --- | --- |
-| Duplicate `valueReference` within the same `DataType` | Error |
-| `causality=input` + `variability=constant` | Error |
-| `causality=output` + `variability=fixed` or `tunable` | Error |
-| `causality=parameter` + `variability=discrete` or `continuous` | Error |
-| No output variables defined | Warning |
-
-### Testing corrupted FMUs
-
-The `data/` directory provides ready-made corrupted FMU archives for each category of structural
-defect. Use Example 06 to run a batch validation sweep:
+The virtual environment is named `pyvenv/` and lives at the project root. It is excluded
+from version control by `.gitignore`.
 
 ```bash
-example_06_batch_validate data
+# ── Create ────────────────────────────────────────────────────────────────────
+python  -m venv pyvenv      # Windows
+python3 -m venv pyvenv      # Linux / WSL / Docker
+
+# ── Activate ──────────────────────────────────────────────────────────────────
+pyvenv\Scripts\activate          # Windows cmd
+pyvenv\Scripts\Activate.ps1      # Windows PowerShell
+source pyvenv/bin/activate       # Linux / WSL / Git Bash
+
+# ── Install dependencies ──────────────────────────────────────────────────────
+pip install -r requirements.txt
+
+# ── Deactivate ────────────────────────────────────────────────────────────────
+deactivate
 ```
 
-Expected output for the corrupted archives:
+`requirements.txt` declares:
 
-```text
-[Structure] FMI 2.0 FMU contains FMI 3.0-style binary directory 'x86_64-windows'...
-[Structure] binaries/ directory not found...
-[Schema]    Element 'fmiModelDescription': The attribute 'guid' is required...
-```
+| Package | Minimum | Purpose |
+|---|---|---|
+| `rich` | 13.7.0 | Colored tables, panels, progress bars, prompts |
+| `colorama` | 0.4.6 | ANSI escape-code compatibility on Windows |
 
 ---
 
-## Examples
+## Project Manager — project_manager.py
 
-Six example applications are provided in `examples/`. They are built automatically when
-`LIB_FMU_TOOLKIT_BUILD_EXAMPLES=ON` (the default).
-
-| # | Example | Description |
-| --- | --- | --- |
-| 01 | `basic_simulate` | Full `simulate()` workflow: load → inspect → configure → run → print results |
-| 02 | `step_by_step` | `FmuSession` manual step loop for external time coordinators |
-| 03 | `validate_fmu` | Three-phase validation with detailed per-phase diagnostic output |
-| 04 | `export_results` | CSV and JSON export of a simulation result, side by side |
-| 05 | `generatore_sommatore` | Two-FMU orchestrated co-simulation (Generatore → Sommatore) |
-| 06 | `batch_validate` | Batch validation of the `data/` directory: valid + corrupted FMUs |
-
-### Running examples
-
-After a successful build (`cmake --build --preset <preset>`), the example binaries are in
-`build/<preset>/bin/`:
+`scripts/project_manager.py` replaces all legacy `.bat` scripts with a single, interactive,
+colored TUI. Always activate `pyvenv` before running it.
 
 ```bash
-# Single FMU validation
-build/windows-mingw-debug/bin/example_03_validate_fmu.exe data/fmi3/Generatore.fmu
-
-# Validate all sample data
-build/windows-mingw-debug/bin/example_06_batch_validate.exe data
-
-# Orchestrated co-simulation
-build/windows-mingw-debug/bin/example_05_generatore_sommatore.exe \
-    data/fmi3/Generatore.fmu data/fmi3/Sommatore.fmu
-
-# Export to CSV + JSON
-build/windows-mingw-debug/bin/example_04_export_results.exe data/fmi3/Generatore.fmu 30 1
+python scripts/project_manager.py
 ```
 
-On Linux, omit the `.exe` extension.
+### Main menu
+
+| Key | Action | Details |
+|---|---|---|
+| **1** | Select Preset | Tabular view of all 8 presets with availability indicators |
+| **2** | Configure | `cmake --preset <name>` |
+| **3** | Build | `cmake --build --preset <name>` |
+| **4** | Clean preset | Delete `build/<preset>/` |
+| **5** | Clean ALL | Delete the entire `build/` directory |
+| **6** | Run Tests + HTML report | Runs `ctest`, parses JUnit XML, generates an HTML report and opens it in the browser |
+| **7** | Deploy to `_shared_lib` | Installs the library into `<deploy_folder>/<name>/<version>/<preset>/` |
+| **8** | Build Docker image | `docker build -t <docker_image> .` |
+| **0** | Quit | |
+
+### Executor model
+
+Each preset has an assigned **executor** that determines how the cmake/ctest commands are
+wrapped:
+
+| Executor | When used | How it works |
+|---|---|---|
+| `native` | Windows presets | Runs cmake directly; injects `mingw64/bin` (or `mingw32/bin`) into the subprocess PATH so the MinGW linker is always found |
+| `wsl` | `linux-mingw-*` | On Windows, wraps the command with `wsl.exe bash -lc "cd '/mnt/…' && cmake …"` |
+| `docker` | `docker-mingw-*` | Wraps with `docker run --rm -v <volume>:/workspace -w /workspace <image> cmake …` |
+
+### CMake / CTest discovery (Windows)
+
+The script searches for `cmake.exe` and `ctest.exe` in this order:
+
+1. System `PATH`
+2. `C:/eng_apps/cmake/cmake-4.2.0/bin/`
+3. `C:/Program Files/CMake/bin/`
+
+### PATH injection for native MinGW presets
+
+When running native Windows presets from any terminal (cmd, PowerShell, VS Code), the script
+automatically prepends the correct MSYS2 bin directory to the child process environment:
+
+- `mingw64` presets → `C:\eng_apps\msys64\mingw64\bin` + `C:\eng_apps\msys64\usr\bin`
+- `mingw32` presets → `C:\eng_apps\msys64\mingw32\bin` + `C:\eng_apps\msys64\usr\bin`
+
+This ensures that `g++.exe`, `ld.exe`, `as.exe`, `ninja.exe`, and `pkg-config.exe` are all
+resolved correctly, even when the MSYS2 directories are not in the system-wide PATH.
 
 ---
 
-## Runtime XSD Schema Discovery
+## CMake Presets
 
-When `FmuEngine` is constructed without an explicit XSD base path, the library searches for the
-FMI schema trees in the following priority order:
+All eight presets are defined in `CMakePresets.json`. The Clang presets that existed in
+earlier versions have been removed — MinGW is the only supported toolchain, which is
+required for ABI compatibility with Qt6's Windows build.
 
-1. **Environment variable** `LIB_FMU_TOOLKIT_XSD_BASE` — if set and non-empty, this path is used
-   directly, bypassing all other candidates.
-2. **Compile-time source path** `LIB_FMU_TOOLKIT_SOURCE_EXTERNAL_DIR` — defined by CMake as the
-   `external/` directory under the project source root. This enables development builds without
-   installation.
-3. **Installed schema directory** — relative to the loaded library module:
-   `<module_dir>/../share/lib-fmu-toolkit/schemas` and `<module_dir>/schemas`.
-4. **Current working directory** — `${cwd}/external`.
+| Preset name | Target OS | Toolchain | Build type | Executor |
+|---|---|---|---|---|
+| `windows-mingw32-debug` | Windows | MSYS2 MinGW32 (`C:\eng_apps\msys64\mingw32`) | Debug | native |
+| `windows-mingw32-release` | Windows | MSYS2 MinGW32 | Release | native |
+| `windows-mingw64-debug` | Windows | MSYS2 MinGW64 (`C:\eng_apps\msys64\mingw64`) | Debug | native |
+| `windows-mingw64-release` | Windows | MSYS2 MinGW64 | Release | native |
+| `linux-mingw-debug` | Linux / WSL | System GCC (`/usr/bin/g++`) | Debug | wsl / native |
+| `linux-mingw-release` | Linux / WSL | System GCC | Release | wsl / native |
+| `docker-mingw-debug` | Docker (Ubuntu 24.04) | System GCC | Debug | docker |
+| `docker-mingw-release` | Docker (Ubuntu 24.04) | System GCC | Release | docker |
 
-The library requires two schema sub-trees at the resolved path:
+Every preset:
 
-```text
-<xsdBasePath>/fmi-standard-2.0/schema/fmi2ModelDescription.xsd
-<xsdBasePath>/fmi-standard-3.0/schema/fmi3ModelDescription.xsd
-```
-
-When installed, `cmake --install` copies these trees to
-`share/lib-fmu-toolkit/schemas/fmi-standard-{2,3}.0/` automatically.
-
-To override the schema path at runtime without recompilation:
-
-```bash
-export LIB_FMU_TOOLKIT_XSD_BASE=/opt/my-schemas
-```
-
-Or pass it explicitly at construction time:
-
-```cpp
-libfmu_toolkit::FmuEngine engine("/opt/my-schemas");
-```
+- Uses **Ninja** as the generator
+- Sets `LIB_FMU_TOOLKIT_PRESET_NAME` cache variable to its own name (used by `SharedLibDeps.cmake`)
+- Places all binaries in `build/<preset-name>/bin/`, libraries in `build/<preset-name>/lib/`
 
 ---
 
-## Build Options
+## CMake Options
 
-| CMake option | Default | Description |
-| --- | --- | --- |
-| `LIB_FMU_TOOLKIT_BUILD_SHARED` | `ON` | Build the shared library target |
-| `LIB_FMU_TOOLKIT_BUILD_STATIC` | `ON` | Build the static library target |
-| `LIB_FMU_TOOLKIT_BUILD_TESTS` | `ON` | Build the GoogleTest test suite |
+These variables can be passed on the command line or set in a `CMakeUserPresets.json` overlay:
+
+| Variable | Default | Description |
+|---|---|---|
+| `LIB_FMU_TOOLKIT_BUILD_SHARED` | `ON` | Build the shared library (`.dll` / `.so`) |
+| `LIB_FMU_TOOLKIT_BUILD_STATIC` | `ON` | Build the static archive (`.a`) |
+| `LIB_FMU_TOOLKIT_BUILD_TESTS` | `ON` | Build the unit and integration test executable |
 | `LIB_FMU_TOOLKIT_BUILD_EXAMPLES` | `ON` | Build the six example applications |
-| `LIB_FMU_TOOLKIT_ENABLE_WARNINGS` | `ON` | Enable strict compiler warning flags |
-| `LIB_FMU_TOOLKIT_ENABLE_WERROR` | `OFF` | Treat warnings as errors |
-| `LIB_FMU_TOOLKIT_ENABLE_SANITIZERS` | `OFF` | Enable AddressSanitizer / UBSan in Debug builds |
-| `LIB_FMU_TOOLKIT_MINGW_STATIC_RUNTIME` | `ON` | Statically link the MinGW C++ runtime (Windows) |
+| `LIB_FMU_TOOLKIT_ENABLE_WARNINGS` | `ON` | Enable strict compiler warnings (`-Wall -Wextra …`) |
+| `LIB_FMU_TOOLKIT_ENABLE_WERROR` | `OFF` | Treat all warnings as errors |
+| `LIB_FMU_TOOLKIT_MINGW_STATIC_RUNTIME` | `ON` | Link the MinGW C++ runtime statically (recommended) |
+| `LIB_FMU_TOOLKIT_PRESET_NAME` | `""` | Set automatically by each preset; do not set manually |
 
-At least one of `LIB_FMU_TOOLKIT_BUILD_SHARED` or `LIB_FMU_TOOLKIT_BUILD_STATIC` must be `ON`;
-a CMake fatal error is raised otherwise.
-
----
-
-## Testing
-
-The test suite lives in `tests/unit/` and `tests/integration/`. Unit tests use injected test
-doubles (stubs) to exercise every layer without requiring real FMU binaries on disk.
+Example — disable tests for a faster configure:
 
 ```bash
-# Run all tests with sanitizers (Linux)
-ctest --preset linux-gcc-debug --output-on-failure
-
-# Run all tests (Windows MinGW)
-ctest --preset windows-mingw-debug --output-on-failure
-
-# Run a specific test binary and filter by name
-./build/linux-gcc-debug/bin/lib_fmu_toolkit_tests --gtest_filter="Validator*"
+cmake --preset windows-mingw64-release -DLIB_FMU_TOOLKIT_BUILD_TESTS=OFF
 ```
 
-### Test coverage
+---
 
-| Test file | What is covered |
-| --- | --- |
-| `test_FmuValidator.cpp` | Structure (missing paths, binaries/, FMI 2.0 vs 3.0 directory naming), Schema (missing XSD, empty XML), Semantics (duplicate VR, invalid causality/variability, no outputs) |
-| `test_ModelDescriptionParser.cpp` | FMI 2.0 and 3.0 XML parsing: all variable types, UnitDefinitions, TypeDefinitions, DefaultExperiment, error cases |
-| `test_SimulationController.cpp` | Step count, recording interval, initial parameter injection, cancellation, progress callback |
-| `test_ResultExporters.cpp` | CSV and JSON exporters: header rows, row counts, boolean encoding, string escaping, unwritable path error |
-| `test_FmuEngine_load.cpp` | FMU loading workflow: archive extraction, DLL loading, symbol resolution |
-| `test_fmi3_fmus.cpp` (integration) | 25+ real-FMU tests against Generatore.fmu and Sommatore.fmu |
+## Shared Library Dependencies — _shared_lib
+
+When `lib-fmu-toolkit` depends on another user-written library (not a system package), declare
+it in `project.json`:
+
+```json
+{
+    "dependencies": [
+        { "name": "lib-my-signal-bus", "version": "2.0.0" }
+    ]
+}
+```
+
+`cmake/SharedLibDeps.cmake` reads this at configure time and expects the dependency to be
+already deployed under `shared_lib_base` in the following layout:
+
+```
+D:/GeekyTechRepos/_shared_lib/
+└── lib-my-signal-bus/
+    └── 2.0.0/
+        └── windows-mingw64-debug/    ← must match LIB_FMU_TOOLKIT_PRESET_NAME exactly
+            ├── include/              ← directory is added to the compiler's include path
+            │   └── *.hpp
+            ├── lib/
+            │   └── *.a              ← preferred: statically linked
+            └── bin/
+                └── *.dll            ← fallback if no .a is found (with a warning)
+```
+
+CMake raises a fatal error if a declared dependency is missing from disk, so you will catch
+missing deps at configure time rather than at link time.
 
 ---
 
-## Documentation
+## Deploy Layout
 
-In-depth technical documentation lives in the [`docs/`](docs/) directory:
+After running option **7** (Deploy), the install tree is written to:
 
-| Document | Description |
-| --- | --- |
-| [requirements/srs.md](docs/requirements/srs.md) | Software Requirements Specification |
-| [architecture/architecture.md](docs/architecture/architecture.md) | Layer map, class responsibilities, data-flow diagrams |
-| [standards/fmi2_standard.md](docs/standards/fmi2_standard.md) | FMI 2.0 archive structure, XML schema, lifecycle, function signatures |
-| [standards/fmi3_standard.md](docs/standards/fmi3_standard.md) | FMI 3.0 archive structure, new types, lifecycle, differences from FMI 2.0 |
-| [reference/validation.md](docs/reference/validation.md) | Three-phase validation pipeline: checks, error messages, test data |
-| [reference/api_reference.md](docs/reference/api_reference.md) | Complete public API reference (FmuEngine, FmuSession, types, exceptions) |
-| [build/build.md](docs/build/build.md) | Build presets, CMake options, dependency resolution, Qt6 integration |
+```
+<deploy_folder>/<name>/<version>/<preset>/
+```
 
-Architecture Decision Records:
+For example, deploying `windows-mingw64-release` produces:
 
-| ADR | Decision |
-| --- | --- |
-| [0001-hexagonal-architecture.md](docs/adr/0001-hexagonal-architecture.md) | Why hexagonal architecture (Ports & Adapters) |
-| [0002-pimpl-public-api.md](docs/adr/0002-pimpl-public-api.md) | Why PIMPL for the public API |
-| [0003-cross-platform-toolchains-only.md](docs/adr/0003-cross-platform-toolchains-only.md) | Why MSVC is not supported |
-| [0004-three-phase-fmu-validation.md](docs/adr/0004-three-phase-fmu-validation.md) | Why validation runs all three phases unconditionally |
-| [0005-abi-stability-source-distribution.md](docs/adr/0005-abi-stability-source-distribution.md) | ABI stability mitigations (`std::string_view`, out-of-line methods, `_GLIBCXX_USE_CXX11_ABI`) |
+```
+D:/GeekyTechRepos/_shared_lib/
+└── lib-fmu-toolkit/
+    └── 0.1.0/
+        └── windows-mingw64-release/
+            ├── bin/
+            │   ├── lib-fmu-toolkit.dll       ← shared library
+            │   └── libwinpthread-1.dll        ← MinGW threading runtime (bundled automatically)
+            ├── include/                       ← headers installed FLAT — no subdirectory
+            │   ├── exceptions.hpp
+            │   ├── export.hpp
+            │   ├── fmu_engine.hpp
+            │   ├── lib_fmu_toolkit.hpp
+            │   ├── types.hpp
+            │   └── version.hpp
+            └── lib/
+                ├── lib-fmu-toolkit.a          ← static archive
+                └── liblib-fmu-toolkit.dll.a   ← Windows import library
+```
+
+And for `docker-mingw-debug` (Linux shared object):
+
+```
+D:/GeekyTechRepos/_shared_lib/
+└── lib-fmu-toolkit/
+    └── 0.1.0/
+        └── docker-mingw-debug/
+            ├── include/                       ← headers installed flat
+            │   ├── exceptions.hpp
+            │   ├── export.hpp
+            │   ├── fmu_engine.hpp
+            │   ├── lib_fmu_toolkit.hpp
+            │   ├── types.hpp
+            │   └── version.hpp
+            └── lib/
+                ├── lib-fmu-toolkit.so         ← symlink → lib-fmu-toolkit.so.1
+                ├── lib-fmu-toolkit.so.1       ← symlink → lib-fmu-toolkit.so.1.0.0
+                ├── lib-fmu-toolkit.so.1.0.0   ← versioned shared object
+                └── lib-fmu-toolkit.a          ← static archive
+```
+
+> **Flat headers:** Public headers are installed directly into `include/`, not into a
+> `include/libfmu_toolkit/` subdirectory. Consumer CMake projects should add
+> `<prefix>/include` to their include path and include headers without a prefix:
+>
+> ```cpp
+> #include "fmu_engine.hpp"
+> #include "types.hpp"
+> ```
 
 ---
 
-## Contributing
+## Runtime Distribution
 
-Contributions, bug reports, and feature requests are welcome via the issue tracker and pull
-requests.
+| Runtime component | Windows status | Linux status | Notes |
+|---|---|---|---|
+| `libstdc++-6.dll` | Statically linked | n/a | `-static-libstdc++` |
+| `libgcc_s_seh-1.dll` | Statically linked | n/a | `-static-libgcc` |
+| `libwinpthread-1.dll` | **Bundled** (by deploy step) | n/a | MinGW POSIX threading; copied from `mingw64/bin/` by `project_manager.py` |
+| `msvcrt.dll` | Dynamic (system) | n/a | Always present on any Windows installation |
+| `libxml2.so` | n/a | Linked from system | `libxml2-dev` package |
+| `libzip.so` | n/a | Linked from system | `libzip-dev` package |
 
-The project follows these design principles rigorously:
+**End users on Windows** need only two files: `lib-fmu-toolkit.dll` and
+`libwinpthread-1.dll`. No MSYS2 or MinGW installation is required on the target machine.
 
-- **SOLID** — each class has exactly one reason to change. Use-case classes depend on abstract
-  port interfaces; concrete adapters are wired only at the composition root (`FmuEngine::Impl`).
-  The FmuValidator is partitioned into three clearly-bounded private methods (one per phase).
+**On Linux**, `libxml2` and `libzip` are linked as shared libraries and must be installed
+via the distribution package manager.
 
-- **DRY** — shared logic (FMI 2.0 / FMI 3.0 binary directory lists, platform detection macros)
-  is defined once in named constants. The two FMI code paths in the simulation adapter share
-  common initialization structure while preserving type-system differences.
+---
 
-- **KISS** — no speculative abstractions. Complexity lives where it genuinely belongs (the FMI
-  lifecycle is inherently complex; the XSD/binary naming lookup needs exhaustive enumeration).
-  The public API surface is minimal and orthogonal.
+## FMU Test Data and Cross-Platform Binaries
 
-- **Hexagonal architecture** — the domain and use-case layers have zero dependencies on
-  third-party libraries. Only adapters depend on libxml2 and libzip; this isolation is enforced
-  by CMake target visibility (`PRIVATE` linkage in `src/`).
+The test suite uses two hand-crafted FMI 3.0 FMUs located in `tests/data/`:
 
-- **PIMPL** — public headers ship no internal types, ensuring ABI stability across minor releases
-  and compatibility with Qt's include model.
+| FMU | Model | Inputs | Outputs |
+|---|---|---|---|
+| `Generatore.fmu` | Linear ramp: `y = t × 5.0` | — | `y` (Float64) |
+| `Sommatore.fmu` | Adder: `y = u1 + u2` | `u1`, `u2` (Float64) | `y` (Float64) |
+
+Both FMUs contain **platform binaries for both Windows and Linux** in the standard
+FMI 3.0 directory layout:
+
+```
+Generatore.fmu (zip)
+├── modelDescription.xml
+├── binaries/
+│   ├── x86_64-windows/
+│   │   └── Generatore.dll          ← pre-built Windows DLL
+│   └── x86_64-linux/
+│       └── Generatore.so           ← pre-built Linux shared object
+└── sources/
+    └── generatore.c                ← C source (FMI 3.0)
+```
+
+### Rebuilding the Linux FMU binaries
+
+If you need to regenerate the Linux `.so` files from the C sources — for example after
+pulling the repository on a machine that previously only had the Windows binaries — run:
+
+```bash
+# From the project root (pyvenv must be active)
+python scripts/build_linux_fmu_binaries.py
+```
+
+This script:
+
+1. Opens each `.fmu` archive and extracts the C source file.
+2. Compiles the source inside the `lib-fmu-toolkit-builder` Docker container using
+   `gcc -shared -fPIC -I/workspace/external/fmi-standard-3.0/headers`.
+3. Injects the resulting `.so` back into the FMU zip archive under
+   `binaries/x86_64-linux/`.
+
+The script is idempotent — if a Linux binary is already present in the archive, it prints
+a message and skips recompilation.
+
+> **Prerequisite:** The Docker image (`lib-fmu-toolkit-builder`) must exist. Build it once
+> with option **8** in the project manager, or directly:
+> ```bash
+> docker build -t lib-fmu-toolkit-builder .
+> ```
+
+---
+
+## Running the Tests
+
+### Via the project manager (recommended)
+
+Select option **6** after building. The project manager runs `ctest`, captures output,
+parses the JUnit XML file, generates an HTML report in `build/<preset>/test_results.html`,
+and offers to open it automatically in the default browser.
+
+### Directly with ctest
+
+```bash
+# Windows — debug preset
+ctest --test-dir build/windows-mingw64-debug --output-on-failure
+
+# Linux / WSL — debug preset
+ctest --test-dir build/linux-mingw-debug --output-on-failure
+
+# Docker — debug preset (from Windows, via project_manager or Python)
+docker run --rm \
+    -v "D:/GeekyTechRepos/lib-fmu-toolkit:/workspace" \
+    lib-fmu-toolkit-builder \
+    ctest --test-dir /workspace/build/docker-mingw-debug --output-on-failure
+```
+
+### Test suite breakdown
+
+The suite contains **103 tests** covering:
+
+| Test suite | Count | What it covers |
+|---|---|---|
+| `GeneratoreTest` | 13 | Load, inspect, validate, simulate, export, step-by-step, unload |
+| `SommatoreTest` | 12 | Same lifecycle tests for the two-input adder FMU |
+| `CrossFmuTest` | 1 | Two FMUs loaded simultaneously in the same engine |
+| `FmuEngineTest` | 8 | Engine construction, error paths, empty export |
+| `FmuEngineIntegrationTest` | 1 | Full pipeline: load → validate → simulate |
+| `ValidatorStructureTest` | 2 | Missing path / missing schema detection |
+| `ValidatorBinaryDirTest` | 4 | FMI 2.0 vs 3.0 binary directory naming checks |
+| `ValidatorSchemaTest` | 2 | XSD validation pass/fail |
+| `ValidatorSemanticTest` | 5 | Duplicate VRs, invalid causality/variability combinations |
+| `Fmi2ParserTest` | 14 | All FMI 2.0 XML parsing paths |
+| `Fmi3ParserTest` | 9 | All FMI 3.0 XML parsing paths |
+| `ParserErrorTest` | 4 | Malformed / missing XML |
+| `ParserEdgeTest` | 2 | Edge cases (no variables, no default experiment) |
+| `CsvExporterTest` | 7 | CSV output correctness |
+| `JsonExporterTest` | 7 | JSON output correctness |
+| `SimulationControllerTest` | 9 | Step logic, recording interval, cancellation |
+
+---
+
+## Running the Examples
+
+All example executables land in `build/<preset>/bin/`. On Windows, `lib-fmu-toolkit.dll`
+and `libwinpthread-1.dll` are copied next to each executable at build time so they can be
+run without modifying `PATH`.
+
+```bat
+:: Windows — from the project root
+build\windows-mingw64-debug\bin\example_01_basic_simulate.exe tests\data\Generatore.fmu
+
+build\windows-mingw64-debug\bin\example_02_step_by_step.exe tests\data\Generatore.fmu
+
+build\windows-mingw64-debug\bin\example_03_validate_fmu.exe tests\data\Generatore.fmu
+
+build\windows-mingw64-debug\bin\example_04_export_results.exe tests\data\Generatore.fmu results.json
+
+build\windows-mingw64-debug\bin\example_05_generatore_sommatore.exe ^
+    tests\data\Generatore.fmu tests\data\Sommatore.fmu
+
+build\windows-mingw64-debug\bin\example_06_batch_validate.exe tests\data\
+```
+
+| Example | Description |
+|---|---|
+| `01_basic_simulate` | Load an FMU → inspect metadata → run a full co-simulation → print result columns |
+| `02_step_by_step` | Manual `doStep` loop using `FmuSession` — demonstrates per-step I/O |
+| `03_validate_fmu` | XSD schema + semantic validation only, no simulation |
+| `04_export_results` | Simulate and export the result series to JSON |
+| `05_generatore_sommatore` | Two-FMU composition: feed the ramp generator's output into the adder |
+| `06_batch_validate` | Scan a directory for `.fmu` files and validate each one |
+
+---
+
+## Library Public API
+
+Include headers directly (no subdirectory prefix after deploy):
+
+```cpp
+#include "lib_fmu_toolkit.hpp"   // master include — pulls in everything
+// or individually:
+#include "fmu_engine.hpp"
+#include "types.hpp"
+#include "exceptions.hpp"
+```
+
+### Complete usage example
+
+```cpp
+#include "lib_fmu_toolkit.hpp"
+#include <iostream>
+
+int main()
+{
+    libfmu_toolkit::FmuEngine engine;
+
+    // ── Load ──────────────────────────────────────────────────────────────
+    uint64_t handle = engine.load("path/to/model.fmu");
+
+    // ── Inspect metadata ──────────────────────────────────────────────────
+    libfmu_toolkit::FmuInfo info = engine.info(handle);
+    std::cout << "Model: " << info.modelName
+              << "  FMI: " << info.fmiVersion << "\n";
+    for (const auto& var : info.variables)
+        std::cout << "  " << var.name << " [" << var.valueReference << "]\n";
+
+    // ── Validate ──────────────────────────────────────────────────────────
+    auto vr = engine.validate(handle);
+    if (vr.hasErrors()) {
+        for (const auto& e : vr.errors)
+            std::cerr << "[ERROR] " << e.message << "\n";
+        return 1;
+    }
+
+    // ── Simulate (one-shot) ───────────────────────────────────────────────
+    libfmu_toolkit::SimConfig cfg;
+    cfg.startTime       = 0.0;
+    cfg.stopTime        = 10.0;
+    cfg.stepSize        = 0.01;
+    cfg.recordingInterval = 0.1;   // record every 0.1 s instead of every step
+
+    auto result = engine.simulate(handle, cfg);
+    // result.series["y"] → std::vector<libfmu_toolkit::ScalarValue>
+
+    // ── Export ────────────────────────────────────────────────────────────
+    engine.exportCsv(result, "output.csv");
+    engine.exportJson(result, "output.json");
+
+    // ── Step-by-step session ──────────────────────────────────────────────
+    auto session = engine.openSession(handle, cfg);
+    while (!session.done()) {
+        session.setReal("u1", 3.14);
+        session.doStep();
+        double y = session.getReal("y");
+        std::cout << "y = " << y << "\n";
+    }
+    session.close();
+
+    // ── Unload ────────────────────────────────────────────────────────────
+    engine.unload(handle);
+}
+```
+
+### Linking against the deployed library (CMake consumer)
+
+```cmake
+# In the consuming project's CMakeLists.txt
+set(LIB_FMU_TOOLKIT_DIR
+    "D:/GeekyTechRepos/_shared_lib/lib-fmu-toolkit/0.1.0/windows-mingw64-release")
+
+add_library(lib_fmu_toolkit::shared SHARED IMPORTED)
+set_target_properties(lib_fmu_toolkit::shared PROPERTIES
+    IMPORTED_LOCATION          "${LIB_FMU_TOOLKIT_DIR}/bin/lib-fmu-toolkit.dll"
+    IMPORTED_IMPLIB            "${LIB_FMU_TOOLKIT_DIR}/lib/liblib-fmu-toolkit.dll.a"
+    INTERFACE_INCLUDE_DIRECTORIES "${LIB_FMU_TOOLKIT_DIR}/include"
+)
+
+target_link_libraries(my_app PRIVATE lib_fmu_toolkit::shared)
+```
+
+---
+
+## Building Manually with CMake
+
+Use this approach when you want to bypass the project manager or integrate with your own
+build orchestration.
+
+```bash
+# ── Configure ─────────────────────────────────────────────────────────────────
+cmake --preset windows-mingw64-debug
+
+# ── Build ──────────────────────────────────────────────────────────────────────
+cmake --build build/windows-mingw64-debug
+
+# ── Test ───────────────────────────────────────────────────────────────────────
+ctest --test-dir build/windows-mingw64-debug --output-on-failure
+
+# ── Deploy ─────────────────────────────────────────────────────────────────────
+cmake --install build/windows-mingw64-debug \
+      --prefix "D:/GeekyTechRepos/_shared_lib/lib-fmu-toolkit/0.1.0/windows-mingw64-debug"
+```
+
+> **Windows PATH requirement:** CMake calls Ninja which calls `g++.exe` and `ld.exe`. These
+> tools are found only if `C:\eng_apps\msys64\mingw64\bin` is in PATH. The project manager
+> handles this automatically. If you run cmake manually from a plain Windows terminal, add
+> the MinGW bin directory to PATH first:
+>
+> ```bat
+> set PATH=C:\eng_apps\msys64\mingw64\bin;C:\eng_apps\msys64\usr\bin;%PATH%
+> cmake --preset windows-mingw64-debug
+> ```
+
+---
+
+## CI — GitHub Actions
+
+The workflow at `.github/workflows/ci.yml` runs on Ubuntu Latest for every push and pull
+request to `main` / `master`:
+
+```yaml
+- name: Install toolchain
+  run: |
+    sudo apt-get update
+    sudo apt-get install -y ninja-build g++ cmake pkg-config libxml2-dev libzip-dev
+
+- name: Configure
+  run: cmake --preset linux-mingw-debug
+
+- name: Build
+  run: cmake --build --preset linux-mingw-debug
+
+- name: Test
+  run: ctest --test-dir build/linux-mingw-debug --output-on-failure
+```
+
+No vcpkg, no Clang, no Docker in CI — the native GCC toolchain on the GitHub runner is
+sufficient.
+
+---
+
+## Troubleshooting
+
+### 1. Linker exits silently with code 1 on Windows (no error message)
+
+**Symptom:** `cmake --build` fails at the link step. The Ninja output shows the full linker
+command but no error text. The DLL is not created.
+
+**Cause:** CMake wraps the linker command in `cmd.exe /C "…"`. When MinGW's `ld.exe` cannot
+find its support executables (`cc1plus.exe`, `as.exe`, etc.), it exits with code 1 without
+printing anything to stderr — because `cmd.exe` swallows the output stream.
+
+**Root cause:** `C:\eng_apps\msys64\mingw64\bin` is not in the PATH of the calling process.
+
+**Fix (project manager):** The project manager always injects the correct MSYS2 bin directory
+into the subprocess environment. Use the project manager instead of running cmake directly.
+
+**Fix (manual cmake):** Add the MSYS2 bin directories to PATH before calling cmake:
+
+```bat
+set PATH=C:\eng_apps\msys64\mingw64\bin;C:\eng_apps\msys64\usr\bin;%PATH%
+cmake --build build/windows-mingw64-debug
+```
+
+---
+
+### 2. Docker `docker run` converts `/workspace` to a Windows path
+
+**Symptom:** Running `docker run … -w /workspace …` from an MSYS2 bash or Git Bash
+terminal fails with:
+
+```
+docker: Error response from daemon: the working directory
+'C:/eng_apps/Git/workspace' is invalid
+```
+
+**Cause:** MSYS2/Git Bash intercepts absolute Unix-style paths in command-line arguments
+and converts them to Windows paths before passing them to the process.
+
+**Fix:** Always invoke `docker run` from Python's `subprocess` module (as the project
+manager does), or from a plain Windows cmd / PowerShell session where no path conversion
+occurs. Alternatively, set `MSYS_NO_PATHCONV=1` in your shell session:
+
+```bash
+MSYS_NO_PATHCONV=1 docker run --rm \
+    -v "D:/GeekyTechRepos/lib-fmu-toolkit:/workspace" \
+    -w /workspace lib-fmu-toolkit-builder bash
+```
+
+---
+
+### 3. Integration tests fail in Docker — "shared library not found in binaries/"
+
+**Symptom:** Tests that load `Generatore.fmu` or `Sommatore.fmu` fail inside Docker with:
+
+```
+ZipLoaderAdapter::findSharedLibrary — shared library for model 'Generatore'
+not found in: /tmp/libfmu_toolkit/.../Generatore_.../binaries
+```
+
+**Cause:** The FMU archive does not contain a `binaries/x86_64-linux/Generatore.so` entry.
+This happens if the FMU was originally created on Windows and never had its Linux binaries
+added.
+
+**Fix:** Run the Linux FMU binary builder:
+
+```bash
+python scripts/build_linux_fmu_binaries.py
+```
+
+This script uses Docker to compile the FMU's C sources and injects the resulting `.so`
+files into the FMU archives. The Docker image must exist first:
+
+```bash
+docker build -t lib-fmu-toolkit-builder .
+```
+
+---
+
+### 4. `python scripts/project_manager.py` fails with `ModuleNotFoundError: No module named 'rich'`
+
+**Cause:** The virtual environment is not activated, or `pip install -r requirements.txt`
+was never run.
+
+**Fix:**
+
+```bash
+# Windows
+pyvenv\Scripts\activate
+pip install -r requirements.txt
+
+# Linux / WSL
+source pyvenv/bin/activate
+pip install -r requirements.txt
+```
+
+If `pyvenv/` does not exist, create it first:
+
+```bash
+python  -m venv pyvenv   # Windows
+python3 -m venv pyvenv   # Linux / WSL
+```
+
+---
+
+### 5. CMake cannot find `libxml2` or `libzip` on Windows
+
+**Symptom:** Configure step fails with:
+
+```
+Could not find a package configuration file provided by "LibXml2"
+```
+
+or `pkg_check_modules` fails for `libxml-2.0` or `libzip`.
+
+**Cause:** The MinGW64 packages `mingw-w64-x86_64-libxml2` and `mingw-w64-x86_64-libzip`
+are not installed, or `PKG_CONFIG_PATH` / `PKG_CONFIG` are not pointing to the MinGW64
+sysroot.
+
+**Fix:**
+
+```bash
+# Open the MSYS2 MinGW64 terminal (not MSYS2 UCRT64 or MSYS2 MSYS)
+pacman -S mingw-w64-x86_64-libxml2 mingw-w64-x86_64-libzip
+```
+
+Verify that the presets set the correct `PKG_CONFIG` and `PKG_CONFIG_PATH` in
+`CMakePresets.json`. The MinGW64 entries should read:
+
+```json
+"PKG_CONFIG":      "C:/eng_apps/msys64/mingw64/bin/pkg-config.exe",
+"PKG_CONFIG_PATH": "C:/eng_apps/msys64/mingw64/lib/pkgconfig"
+```
+
+---
+
+### 6. Tests exit with code `0xC0000135` (STATUS_DLL_NOT_FOUND) on Windows
+
+**Symptom:** `ctest` output shows tests failing with exit code `0xC0000135`.
+
+**Cause:** `libwinpthread-1.dll` (or another DLL) is not in the same directory as the test
+executable.
+
+**Fix:** The CMake build is configured to copy `libwinpthread-1.dll` next to each
+executable at build time via a `POST_BUILD` command. If the DLL is missing, rebuild:
+
+```bash
+cmake --build build/windows-mingw64-debug -- -j4
+```
+
+If the error persists, verify that the DLL exists in the compiler's bin directory:
+
+```
+C:\eng_apps\msys64\mingw64\bin\libwinpthread-1.dll
+```
+
+If it is missing, reinstall the `mingw-w64-x86_64-winpthreads-git` package from MSYS2.
+
+---
+
+### 7. WSL configure fails — `cmake: command not found`
+
+**Symptom:** Selecting a `linux-mingw-*` preset in the project manager and pressing
+**Configure** prints `bash: cmake: command not found` inside WSL.
+
+**Cause:** CMake is not installed inside the WSL distribution.
+
+**Fix:**
+
+```bash
+# Inside WSL
+sudo apt-get update
+sudo apt-get install -y cmake ninja-build g++ pkg-config libxml2-dev libzip-dev
+```
+
+---
+
+### 8. Deploy produces `include/libfmu_toolkit/` subdirectory (old layout)
+
+**Symptom:** After deploying, headers land at `include/libfmu_toolkit/fmu_engine.hpp`
+instead of the expected flat `include/fmu_engine.hpp`.
+
+**Cause:** The build directory was configured with an older version of `CMakeLists.txt`
+that used `FILE_SET public_headers` with a `BASE_DIRS` pointing to `include/`. The old
+ninja cache is stale.
+
+**Fix:** Delete the build directory and reconfigure from scratch:
+
+```bash
+# Via project manager
+# Option 4 → Clean current preset
+# Then Option 2 → Configure, Option 3 → Build, Option 7 → Deploy
+
+# Or manually:
+rm -rf build/windows-mingw64-release
+cmake --preset windows-mingw64-release
+cmake --build build/windows-mingw64-release
+cmake --install build/windows-mingw64-release --prefix "..."
+```
+
+---
+
+### 9. Docker image not found when running Docker presets
+
+**Symptom:** Selecting a `docker-mingw-*` preset shows `✗` in the Ready column or the
+configure step fails with:
+
+```
+Error response from daemon: No such image: lib-fmu-toolkit-builder
+```
+
+**Fix:** Build the Docker image using option **8** in the project manager, or manually:
+
+```bash
+docker build -t lib-fmu-toolkit-builder .
+```
+
+The image is based on `ubuntu:24.04` and is approximately 350 MB after build.
+
+---
+
+### 10. `g++` produces an object file but the DLL is not created, no error shown
+
+This is a variant of issue #1 above. To diagnose it independently:
+
+```bash
+# Run the linker with MSYS PATH from Git Bash or MSYS2
+export PATH=/c/eng_apps/msys64/mingw64/bin:$PATH
+cd build/windows-mingw64-debug
+
+# Re-run cmake build — now g++ and ld are on PATH and errors surface normally
+cmake --build . -- -j1
+```
+
+If `ld.exe` reports `undefined reference` errors, the object files exist but some source
+files were not compiled (check for compilation errors earlier in the build log). If `ld.exe`
+reports `file truncated` on `/dev/null`, your MSYS2 terminal is trying to write to the
+MSYS `/dev/null` device — always use a real file path as the output target.

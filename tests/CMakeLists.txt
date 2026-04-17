@@ -89,6 +89,7 @@ target_include_directories(lib_fmu_toolkit_tests PRIVATE "${CMAKE_SOURCE_DIR}/sr
 target_compile_features(lib_fmu_toolkit_tests PRIVATE cxx_std_20)
 lib_fmu_toolkit_apply_options(lib_fmu_toolkit_tests)
 lib_fmu_toolkit_apply_mingw_static_runtime(lib_fmu_toolkit_tests)
+lib_fmu_toolkit_copy_winpthread(lib_fmu_toolkit_tests)
 
 include(GoogleTest)
 gtest_discover_tests(lib_fmu_toolkit_tests)

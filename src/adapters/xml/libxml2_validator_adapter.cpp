@@ -6,6 +6,30 @@
 
 #include <memory>
 #include <string>
+#include <type_traits>
+
+// ── libxml2 API portability ──────────────────────────────────────────────────
+// The const-ness of the xmlError pointer in xmlStructuredErrorFunc differs
+// across libxml2 versions and distro patches:
+//   Ubuntu 24.04 / libxml2 2.9.x: void(*)(void*, xmlError*)        — no const
+//   MinGW64       / libxml2 2.15.x: void(*)(void*, const xmlError*) — with const
+//
+// We strip the pointer-to-function layer and extract the second parameter type
+// at compile time so the callbacks always match the platform's exact signature.
+namespace {
+    // Primary template — catches any function-pointer shape.
+    template<typename F>
+    struct XmlStructuredErrTraits;
+
+    // Specialisation: non-const error pointer (e.g. libxml2 2.9.x)
+    template<typename R, typename A0, typename A1>
+    struct XmlStructuredErrTraits<R(*)(A0, A1)> {
+        using ErrorPtr = A1;  // whatever the second param actually is
+    };
+
+    using XmlStructuredErrorPtr =
+        typename XmlStructuredErrTraits<xmlStructuredErrorFunc>::ErrorPtr;
+} // namespace
 
 namespace libfmu_toolkit {
 
@@ -33,7 +57,7 @@ struct XmlSchemaValidCtxtDeleter {
 };
 using XmlSchemaValidCtxtPtr = std::unique_ptr<xmlSchemaValidCtxt, XmlSchemaValidCtxtDeleter>;
 
-static void schemaParserErrorCallback(void* userData, const xmlError* error)
+static void schemaParserErrorCallback(void* userData, XmlStructuredErrorPtr error)
 {
     auto* report = static_cast<ValidationReport*>(userData);
     if (error && error->message) {
@@ -43,7 +67,7 @@ static void schemaParserErrorCallback(void* userData, const xmlError* error)
     }
 }
 
-static void schemaValidErrorCallback(void* userData, const xmlError* error)
+static void schemaValidErrorCallback(void* userData, XmlStructuredErrorPtr error)
 {
     auto* report = static_cast<ValidationReport*>(userData);
     if (error && error->message) {

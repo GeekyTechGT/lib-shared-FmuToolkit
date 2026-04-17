@@ -18,6 +18,10 @@ option(LIB_FMU_TOOLKIT_ENABLE_WERROR "Treat warnings as errors" OFF)
 option(LIB_FMU_TOOLKIT_ENABLE_SANITIZERS "Enable sanitizers for supported debug builds" OFF)
 option(LIB_FMU_TOOLKIT_MINGW_STATIC_RUNTIME "Statically link MinGW C++ runtime libraries when using MinGW" ON)
 
+# Name of the active CMake preset (injected automatically by each configurePreset).
+# Used by SharedLibDeps to locate user dependencies in the shared library folder.
+set(LIB_FMU_TOOLKIT_PRESET_NAME "" CACHE STRING "Active CMakePresets preset name (set automatically)")
+
 if(NOT LIB_FMU_TOOLKIT_BUILD_SHARED AND NOT LIB_FMU_TOOLKIT_BUILD_STATIC)
     message(FATAL_ERROR "At least one of LIB_FMU_TOOLKIT_BUILD_SHARED or LIB_FMU_TOOLKIT_BUILD_STATIC must be ON")
 endif()
@@ -32,9 +36,16 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}"
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
 
 include(cmake/ProjectOptions.cmake)
+include(cmake/SharedLibDeps.cmake)
 
 function(lib_fmu_toolkit_apply_mingw_static_runtime target_name)
     if(MINGW AND LIB_FMU_TOOLKIT_MINGW_STATIC_RUNTIME)
+        # -static-libgcc / -static-libstdc++ ensure the GCC C++ runtime
+        # (libstdc++-6.dll, libgcc_s_seh-1.dll) is baked into the binary so it
+        # does not need to be distributed.  winpthread is linked statically where
+        # possible; if libxml2.a or libzip.a pull in further pthread references
+        # after the -Bdynamic switch, libwinpthread-1.dll may still appear as a
+        # transitive dependency — distribute it alongside your DLL in that case.
         target_link_options(
             ${target_name}
             PRIVATE
@@ -44,6 +55,24 @@ function(lib_fmu_toolkit_apply_mingw_static_runtime target_name)
                 -lwinpthread
                 -Wl,-Bdynamic
         )
+    endif()
+endfunction()
+
+# Copy libwinpthread-1.dll next to an EXECUTABLE target at build time.
+# Must only be called for executable targets (not libraries) to avoid nested
+# cmd.exe /C quoting issues in the generated ninja build rules on Windows.
+function(lib_fmu_toolkit_copy_winpthread target_name)
+    if(MINGW AND LIB_FMU_TOOLKIT_MINGW_STATIC_RUNTIME AND WIN32)
+        get_filename_component(_mingw_bin "${CMAKE_CXX_COMPILER}" DIRECTORY)
+        set(_winpthread_src "${_mingw_bin}/libwinpthread-1.dll")
+        if(EXISTS "${_winpthread_src}")
+            add_custom_command(TARGET ${target_name} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${_winpthread_src}"
+                    "$<TARGET_FILE_DIR:${target_name}>"
+                COMMENT "Copying libwinpthread-1.dll next to ${target_name}"
+            )
+        endif()
     endif()
 endfunction()
 
@@ -132,6 +161,10 @@ else()
         set(LIB_FMU_TOOLKIT_LIBZIP_TARGET PkgConfig::LIBZIP)
     endif()
 endif()
+
+# Resolve user-defined dependencies from the shared library folder (_shared_lib).
+# This appends to LIB_FMU_TOOLKIT_EXTRA_INCLUDE_DIRS and LIB_FMU_TOOLKIT_EXTRA_LINK_LIBS.
+lib_fmu_toolkit_resolve_shared_deps()
 
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated/libfmu_toolkit")
 configure_file(
@@ -281,48 +314,21 @@ endif()
 
 add_library(lib_fmu_toolkit::lib_fmu_toolkit ALIAS ${_lib_fmu_toolkit_primary_target})
 
+# Install library binaries and import libs.
+# Do NOT install FILE_SET here — headers are installed flat below.
 install(
     TARGETS ${_lib_fmu_toolkit_install_targets}
-    EXPORT lib_fmu_toolkitTargets
-    FILE_SET public_headers
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
     LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
 )
 
+# Install public headers flat into include/ (no libfmu_toolkit/ subdirectory).
+# Consumers add <prefix>/include to their include path and use e.g.
+#   #include "fmu_engine.hpp"
 install(
-    DIRECTORY
-        "${CMAKE_CURRENT_SOURCE_DIR}/external/fmi-standard-2.0"
-        "${CMAKE_CURRENT_SOURCE_DIR}/external/fmi-standard-3.0"
-    DESTINATION "${CMAKE_INSTALL_DATADIR}/lib-fmu-toolkit/schemas"
-)
-
-include(CMakePackageConfigHelpers)
-
-write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/lib_fmu_toolkitConfigVersion.cmake"
-    VERSION "${PROJECT_VERSION}"
-    COMPATIBILITY SameMajorVersion
-)
-
-configure_package_config_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/lib_fmu_toolkitConfig.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/lib_fmu_toolkitConfig.cmake"
-    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/lib_fmu_toolkit"
-)
-
-install(
-    EXPORT lib_fmu_toolkitTargets
-    FILE lib_fmu_toolkitTargets.cmake
-    NAMESPACE lib_fmu_toolkit::
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/lib_fmu_toolkit"
-)
-
-install(
-    FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/lib_fmu_toolkitConfig.cmake"
-        "${CMAKE_CURRENT_BINARY_DIR}/lib_fmu_toolkitConfigVersion.cmake"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/lib_fmu_toolkit"
+    FILES ${LIB_FMU_TOOLKIT_PUBLIC_HEADERS}
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
 
 if(LIB_FMU_TOOLKIT_BUILD_TESTS)

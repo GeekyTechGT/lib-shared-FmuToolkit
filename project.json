@@ -1,0 +1,10 @@
+{
+    "name": "lib-fmu-toolkit",
+    "version": "0.1.0",
+    "description": "C++ toolkit for loading, parsing, validating, and simulating FMI 2.0/3.0 FMUs",
+    "license": "MIT",
+    "deploy_folder": "D:/GeekyTechRepos/_shared_lib",
+    "shared_lib_base": "D:/GeekyTechRepos/_shared_lib",
+    "docker_image": "lib-fmu-toolkit-builder",
+    "dependencies": []
+}

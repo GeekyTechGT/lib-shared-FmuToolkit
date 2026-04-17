@@ -24,66 +24,8 @@
             }
         },
         {
-            "name": "linux-gcc-debug",
-            "displayName": "Linux GCC Debug",
-            "inherits": "base",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Linux"
-            },
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "LIB_FMU_TOOLKIT_ENABLE_SANITIZERS": "ON",
-                "CMAKE_CXX_COMPILER": "/usr/bin/g++"
-            }
-        },
-        {
-            "name": "linux-gcc-release",
-            "displayName": "Linux GCC Release",
-            "inherits": "base",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Linux"
-            },
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_CXX_COMPILER": "/usr/bin/g++"
-            }
-        },
-        {
-            "name": "linux-clang-debug",
-            "displayName": "Linux Clang Debug",
-            "inherits": "base",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Linux"
-            },
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "LIB_FMU_TOOLKIT_ENABLE_SANITIZERS": "ON",
-                "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
-            }
-        },
-        {
-            "name": "linux-clang-release",
-            "displayName": "Linux Clang Release",
-            "inherits": "base",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Linux"
-            },
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
-            }
-        },
-        {
-            "name": "windows-mingw-debug",
-            "displayName": "Windows MinGW Debug",
+            "name": "base-windows-mingw32",
+            "hidden": true,
             "inherits": "base",
             "condition": {
                 "type": "equals",
@@ -91,18 +33,19 @@
                 "rhs": "Windows"
             },
             "environment": {
-                "PATH": "C:/eng_apps/msys64/mingw64/bin;C:/eng_apps/msys64/usr/bin;$penv{PATH}"
+                "PATH": "C:/eng_apps/msys64/mingw32/bin;C:/eng_apps/msys64/usr/bin;$penv{PATH}",
+                "PKG_CONFIG_PATH": "C:/eng_apps/msys64/mingw32/lib/pkgconfig",
+                "PKG_CONFIG": "C:/eng_apps/msys64/mingw32/bin/pkg-config.exe"
             },
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_CXX_COMPILER": "C:/eng_apps/msys64/mingw64/bin/g++.exe",
-                "CMAKE_MAKE_PROGRAM": "C:/eng_apps/msys64/mingw64/bin/ninja.exe",
-                "LIB_FMU_TOOLKIT_ENABLE_SANITIZERS": "OFF"
+                "CMAKE_CXX_COMPILER": "C:/eng_apps/msys64/mingw32/bin/g++.exe",
+                "CMAKE_C_COMPILER": "C:/eng_apps/msys64/mingw32/bin/gcc.exe",
+                "CMAKE_MAKE_PROGRAM": "C:/eng_apps/msys64/mingw32/bin/ninja.exe"
             }
         },
         {
-            "name": "windows-mingw-release",
-            "displayName": "Windows MinGW Release",
+            "name": "base-windows-mingw64",
+            "hidden": true,
             "inherits": "base",
             "condition": {
                 "type": "equals",
@@ -110,141 +53,121 @@
                 "rhs": "Windows"
             },
             "environment": {
-                "PATH": "C:/eng_apps/msys64/mingw64/bin;C:/eng_apps/msys64/usr/bin;$penv{PATH}"
+                "PATH": "C:/eng_apps/msys64/mingw64/bin;C:/eng_apps/msys64/usr/bin;$penv{PATH}",
+                "PKG_CONFIG_PATH": "C:/eng_apps/msys64/mingw64/lib/pkgconfig",
+                "PKG_CONFIG": "C:/eng_apps/msys64/mingw64/bin/pkg-config.exe"
             },
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
                 "CMAKE_CXX_COMPILER": "C:/eng_apps/msys64/mingw64/bin/g++.exe",
+                "CMAKE_C_COMPILER": "C:/eng_apps/msys64/mingw64/bin/gcc.exe",
                 "CMAKE_MAKE_PROGRAM": "C:/eng_apps/msys64/mingw64/bin/ninja.exe"
             }
         },
         {
-            "name": "windows-clang-debug",
-            "displayName": "Windows Clang Debug",
+            "name": "base-linux",
+            "hidden": true,
             "inherits": "base",
             "condition": {
                 "type": "equals",
                 "lhs": "${hostSystemName}",
-                "rhs": "Windows"
-            },
-            "environment": {
-                "PATH": "C:/eng_apps/msys64/clang64/bin;C:/eng_apps/msys64/usr/bin;$penv{PATH}"
+                "rhs": "Linux"
             },
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_CXX_COMPILER": "C:/eng_apps/msys64/clang64/bin/clang++.exe",
-                "CMAKE_MAKE_PROGRAM": "C:/eng_apps/msys64/clang64/bin/ninja.exe"
+                "CMAKE_CXX_COMPILER": "/usr/bin/g++",
+                "CMAKE_C_COMPILER": "/usr/bin/gcc"
             }
         },
         {
-            "name": "windows-clang-release",
-            "displayName": "Windows Clang Release",
-            "inherits": "base",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Windows"
-            },
-            "environment": {
-                "PATH": "C:/eng_apps/msys64/clang64/bin;C:/eng_apps/msys64/usr/bin;$penv{PATH}"
-            },
+            "name": "windows-mingw32-debug",
+            "displayName": "Windows MinGW32 Debug",
+            "inherits": "base-windows-mingw32",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "LIB_FMU_TOOLKIT_PRESET_NAME": "windows-mingw32-debug"
+            }
+        },
+        {
+            "name": "windows-mingw32-release",
+            "displayName": "Windows MinGW32 Release",
+            "inherits": "base-windows-mingw32",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_CXX_COMPILER": "C:/eng_apps/msys64/clang64/bin/clang++.exe",
-                "CMAKE_MAKE_PROGRAM": "C:/eng_apps/msys64/clang64/bin/ninja.exe"
+                "LIB_FMU_TOOLKIT_PRESET_NAME": "windows-mingw32-release"
+            }
+        },
+        {
+            "name": "windows-mingw64-debug",
+            "displayName": "Windows MinGW64 Debug",
+            "inherits": "base-windows-mingw64",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "LIB_FMU_TOOLKIT_PRESET_NAME": "windows-mingw64-debug"
+            }
+        },
+        {
+            "name": "windows-mingw64-release",
+            "displayName": "Windows MinGW64 Release",
+            "inherits": "base-windows-mingw64",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "LIB_FMU_TOOLKIT_PRESET_NAME": "windows-mingw64-release"
+            }
+        },
+        {
+            "name": "linux-mingw-debug",
+            "displayName": "Linux/WSL GCC Debug",
+            "inherits": "base-linux",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "LIB_FMU_TOOLKIT_PRESET_NAME": "linux-mingw-debug"
+            }
+        },
+        {
+            "name": "linux-mingw-release",
+            "displayName": "Linux/WSL GCC Release",
+            "inherits": "base-linux",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "LIB_FMU_TOOLKIT_PRESET_NAME": "linux-mingw-release"
+            }
+        },
+        {
+            "name": "docker-mingw-debug",
+            "displayName": "Docker GCC Debug",
+            "inherits": "base-linux",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "LIB_FMU_TOOLKIT_PRESET_NAME": "docker-mingw-debug"
+            }
+        },
+        {
+            "name": "docker-mingw-release",
+            "displayName": "Docker GCC Release",
+            "inherits": "base-linux",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "LIB_FMU_TOOLKIT_PRESET_NAME": "docker-mingw-release"
             }
         }
     ],
     "buildPresets": [
-        {
-            "name": "linux-gcc-debug",
-            "configurePreset": "linux-gcc-debug"
-        },
-        {
-            "name": "linux-gcc-release",
-            "configurePreset": "linux-gcc-release"
-        },
-        {
-            "name": "linux-clang-debug",
-            "configurePreset": "linux-clang-debug"
-        },
-        {
-            "name": "linux-clang-release",
-            "configurePreset": "linux-clang-release"
-        },
-        {
-            "name": "windows-mingw-debug",
-            "configurePreset": "windows-mingw-debug"
-        },
-        {
-            "name": "windows-mingw-release",
-            "configurePreset": "windows-mingw-release"
-        },
-        {
-            "name": "windows-clang-debug",
-            "configurePreset": "windows-clang-debug"
-        },
-        {
-            "name": "windows-clang-release",
-            "configurePreset": "windows-clang-release"
-        }
+        { "name": "windows-mingw32-debug",   "configurePreset": "windows-mingw32-debug"   },
+        { "name": "windows-mingw32-release",  "configurePreset": "windows-mingw32-release"  },
+        { "name": "windows-mingw64-debug",    "configurePreset": "windows-mingw64-debug"    },
+        { "name": "windows-mingw64-release",  "configurePreset": "windows-mingw64-release"  },
+        { "name": "linux-mingw-debug",        "configurePreset": "linux-mingw-debug"        },
+        { "name": "linux-mingw-release",      "configurePreset": "linux-mingw-release"      },
+        { "name": "docker-mingw-debug",       "configurePreset": "docker-mingw-debug"       },
+        { "name": "docker-mingw-release",     "configurePreset": "docker-mingw-release"     }
     ],
     "testPresets": [
-        {
-            "name": "linux-gcc-debug",
-            "configurePreset": "linux-gcc-debug",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "linux-gcc-release",
-            "configurePreset": "linux-gcc-release",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "linux-clang-debug",
-            "configurePreset": "linux-clang-debug",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "linux-clang-release",
-            "configurePreset": "linux-clang-release",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "windows-mingw-debug",
-            "configurePreset": "windows-mingw-debug",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "windows-mingw-release",
-            "configurePreset": "windows-mingw-release",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "windows-clang-debug",
-            "configurePreset": "windows-clang-debug",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "windows-clang-release",
-            "configurePreset": "windows-clang-release",
-            "output": {
-                "outputOnFailure": true
-            }
-        }
+        { "name": "windows-mingw32-debug",   "configurePreset": "windows-mingw32-debug",   "output": { "outputOnFailure": true } },
+        { "name": "windows-mingw32-release",  "configurePreset": "windows-mingw32-release",  "output": { "outputOnFailure": true } },
+        { "name": "windows-mingw64-debug",    "configurePreset": "windows-mingw64-debug",    "output": { "outputOnFailure": true } },
+        { "name": "windows-mingw64-release",  "configurePreset": "windows-mingw64-release",  "output": { "outputOnFailure": true } },
+        { "name": "linux-mingw-debug",        "configurePreset": "linux-mingw-debug",        "output": { "outputOnFailure": true } },
+        { "name": "linux-mingw-release",      "configurePreset": "linux-mingw-release",      "output": { "outputOnFailure": true } },
+        { "name": "docker-mingw-debug",       "configurePreset": "docker-mingw-debug",       "output": { "outputOnFailure": true } },
+        { "name": "docker-mingw-release",     "configurePreset": "docker-mingw-release",     "output": { "outputOnFailure": true } }
     ]
 }
