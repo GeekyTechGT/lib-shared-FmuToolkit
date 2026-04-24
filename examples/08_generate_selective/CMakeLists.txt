@@ -1,0 +1,1 @@
+lib_fmu_toolkit_configure_example(example_08_generate_selective main.cpp)

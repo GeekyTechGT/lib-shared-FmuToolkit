@@ -1,9 +1,9 @@
 #include "fmu_validator.hpp"
+#include "core/generation/fmu_model_description.hpp"
+#include "core/exceptions/fmu_exception.hpp"
 
 #include <algorithm>
 #include <filesystem>
-#include <map>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -277,50 +277,10 @@ void FmuValidator::checkSchema(const FmuPackage& pkg, ValidationReport& report) 
 // ---------------------------------------------------------------------------
 void FmuValidator::checkSemantics(const FmuPackage& pkg, ValidationReport& report) const
 {
-    // --- Duplicate valueReference check ---
-    // Within a single DataType, each valueReference must be unique.
-    {
-        std::map<DataType, std::set<uint32_t>> seenVrByType;
-        for (const auto& var : pkg.variables) {
-            auto& seenSet = seenVrByType[var.dataType];
-            if (!seenSet.insert(var.valueReference).second) {
-                report.addError(
-                    ValidationCategory::Semantic,
-                    "Duplicate valueReference " +
-                        std::to_string(var.valueReference) +
-                        " for type " +
-                        std::string(to_string(var.dataType)));
-            }
-        }
-    }
-
-    // --- Causality / variability combination checks ---
-    // Invalid combinations produce errors (not warnings) because they represent
-    // structural violations of the FMI variable model.
-    for (const auto& var : pkg.variables) {
-        const Causality   c = var.causality;
-        const Variability v = var.variability;
-
-        if (c == Causality::Input && v == Variability::Constant) {
-            report.addError(
-                ValidationCategory::Semantic,
-                "Variable '" + var.name +
-                    "': causality=input combined with variability=constant is invalid");
-        } else if (c == Causality::Output &&
-                   (v == Variability::Fixed || v == Variability::Tunable)) {
-            report.addError(
-                ValidationCategory::Semantic,
-                "Variable '" + var.name +
-                    "': causality=output combined with variability=" +
-                    std::string(to_string(v)) + " is invalid");
-        } else if (c == Causality::Parameter &&
-                   (v == Variability::Discrete || v == Variability::Continuous)) {
-            report.addError(
-                ValidationCategory::Semantic,
-                "Variable '" + var.name +
-                    "': causality=parameter combined with variability=" +
-                    std::string(to_string(v)) + " is invalid");
-        }
+    try {
+        ModelDescriptionSemanticValidator::validateOrThrow(pkg);
+    } catch (const FmuLoadException& ex) {
+        report.addError(ValidationCategory::Semantic, ex.what());
     }
 
     // --- Output variable presence ---

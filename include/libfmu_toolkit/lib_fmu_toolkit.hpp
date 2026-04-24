@@ -18,6 +18,7 @@
 
 #include "export.hpp"
 #include "exceptions.hpp"
+#include "fmu_generation.hpp"
 #include "fmu_engine.hpp"
 #include "types.hpp"
 #include <libfmu_toolkit/version.hpp>

@@ -1,0 +1,85 @@
+{
+  "model": {
+    "standard": "fmi3",
+    "name": "JsonVectorFmi3",
+    "identifier": "json_vector_fmi3",
+    "instantiationToken": "{json-vector-fmi3-token}",
+    "description": "FMI 3.0 model generated from JSON",
+    "author": "lib-fmu-toolkit",
+    "version": "1.0.0",
+    "copyright": "Open source example",
+    "license": "MIT",
+    "generationTool": "lib-fmu-toolkit",
+    "generationDateAndTime": "2026-04-23T12:00:00Z",
+    "variableNamingConvention": "flat"
+  },
+  "defaultExperiment": {
+    "startTime": 0.0,
+    "stopTime": 10.0,
+    "stepSize": 0.2
+  },
+  "unitDefinitions": [
+    {
+      "name": "m/s",
+      "factor": 1.0,
+      "offset": 0.0
+    }
+  ],
+  "typeDefinitions": [
+    {
+      "name": "Velocity",
+      "type": "Float64",
+      "description": "Velocity vector",
+      "unit": "m/s",
+      "quantity": "Velocity"
+    }
+  ],
+  "variables": [
+    {
+      "name": "u",
+      "description": "Input vector",
+      "causality": "input",
+      "variability": "continuous",
+      "type": "Float64",
+      "dimensions": [3],
+      "declaredType": "Velocity",
+      "start": [0.0, 0.0, 0.0]
+    },
+    {
+      "name": "weights",
+      "description": "Weight vector",
+      "causality": "parameter",
+      "variability": "fixed",
+      "initial": "exact",
+      "type": "Float32",
+      "dimensions": [3],
+      "start": [1.0, 0.5, 0.25]
+    },
+    {
+      "name": "mode",
+      "description": "Computation mode",
+      "causality": "parameter",
+      "variability": "fixed",
+      "initial": "exact",
+      "type": "Int32",
+      "start": 1
+    },
+    {
+      "name": "y",
+      "description": "Output vector",
+      "causality": "output",
+      "variability": "continuous",
+      "initial": "calculated",
+      "type": "Float64",
+      "dimensions": [3]
+    },
+    {
+      "name": "label",
+      "description": "State label",
+      "causality": "output",
+      "variability": "discrete",
+      "type": "String",
+      "start": "idle"
+    }
+  ]
+}

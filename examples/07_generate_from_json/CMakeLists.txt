@@ -1,0 +1,1 @@
+lib_fmu_toolkit_configure_example(example_07_generate_from_json main.cpp)

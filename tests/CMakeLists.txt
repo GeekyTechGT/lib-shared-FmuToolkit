@@ -94,4 +94,9 @@ lib_fmu_toolkit_copy_winpthread(lib_fmu_toolkit_tests)
 include(GoogleTest)
 gtest_discover_tests(lib_fmu_toolkit_tests)
 
-target_compile_definitions(lib_fmu_toolkit_tests PRIVATE LIB_FMU_TOOLKIT_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
+target_compile_definitions(
+    lib_fmu_toolkit_tests
+    PRIVATE
+        LIB_FMU_TOOLKIT_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data"
+        LIB_FMU_TOOLKIT_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+)

@@ -1,0 +1,92 @@
+{
+  "model": {
+    "standard": "fmi2",
+    "name": "JsonAdderFmi2",
+    "identifier": "json_adder_fmi2",
+    "guid": "{json-adder-fmi2-guid}",
+    "description": "FMI 2.0 model generated from JSON",
+    "author": "lib-fmu-toolkit",
+    "version": "1.0.0",
+    "generationTool": "lib-fmu-toolkit",
+    "generationDateAndTime": "2026-04-23T12:00:00Z",
+    "variableNamingConvention": "structured",
+    "numberOfEventIndicators": 0
+  },
+  "defaultExperiment": {
+    "startTime": 0.0,
+    "stopTime": 5.0,
+    "stepSize": 0.1,
+    "tolerance": 1e-6
+  },
+  "unitDefinitions": [
+    {
+      "name": "1",
+      "factor": 1.0,
+      "offset": 0.0
+    }
+  ],
+  "typeDefinitions": [
+    {
+      "name": "Gain",
+      "type": "Real",
+      "description": "Gain coefficient",
+      "unit": "1",
+      "quantity": "Gain"
+    }
+  ],
+  "logCategories": [
+    {
+      "name": "logAll",
+      "description": "All generated messages"
+    }
+  ],
+  "variables": [
+    {
+      "name": "u",
+      "description": "Input vector",
+      "causality": "input",
+      "variability": "continuous",
+      "type": "Real",
+      "dimensions": [2],
+      "start": [0.0, 0.0]
+    },
+    {
+      "name": "gain",
+      "description": "Gain vector",
+      "causality": "parameter",
+      "variability": "fixed",
+      "initial": "exact",
+      "type": "Real",
+      "dimensions": [2],
+      "declaredType": "Gain",
+      "start": [1.0, 2.0]
+    },
+    {
+      "name": "bias",
+      "description": "Bias term",
+      "causality": "parameter",
+      "variability": "fixed",
+      "initial": "exact",
+      "type": "Real",
+      "unit": "1",
+      "start": 0.5
+    },
+    {
+      "name": "y",
+      "description": "Output vector",
+      "causality": "output",
+      "variability": "continuous",
+      "initial": "calculated",
+      "type": "Real",
+      "dimensions": [2]
+    },
+    {
+      "name": "ready",
+      "description": "Readiness flag",
+      "causality": "output",
+      "variability": "discrete",
+      "type": "Boolean",
+      "start": false
+    }
+  ]
+}

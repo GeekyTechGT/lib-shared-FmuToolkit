@@ -37,6 +37,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}"
 
 include(cmake/ProjectOptions.cmake)
 include(cmake/SharedLibDeps.cmake)
+include(FetchContent)
 
 function(lib_fmu_toolkit_apply_mingw_static_runtime target_name)
     if(MINGW AND LIB_FMU_TOOLKIT_MINGW_STATIC_RUNTIME)
@@ -78,6 +79,12 @@ endfunction()
 
 find_package(LibXml2 REQUIRED)
 find_package(PkgConfig REQUIRED)
+
+FetchContent_Declare(
+    nlohmann_json
+    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+)
+FetchContent_MakeAvailable(nlohmann_json)
 
 set(LIB_FMU_TOOLKIT_EXTRA_INCLUDE_DIRS "")
 set(LIB_FMU_TOOLKIT_EXTRA_LINK_DIRS "")
@@ -184,6 +191,7 @@ endif()
 set(LIB_FMU_TOOLKIT_PUBLIC_HEADERS
     include/libfmu_toolkit/export.hpp
     include/libfmu_toolkit/exceptions.hpp
+    include/libfmu_toolkit/fmu_generation.hpp
     include/libfmu_toolkit/fmu_engine.hpp
     include/libfmu_toolkit/lib_fmu_toolkit.hpp
     include/libfmu_toolkit/types.hpp
@@ -280,6 +288,7 @@ function(lib_fmu_toolkit_configure_library target_name library_type)
     target_link_libraries(
         ${target_name}
         ${_lib_fmu_toolkit_dependency_scope}
+            nlohmann_json::nlohmann_json
             ${LIB_FMU_TOOLKIT_XML_LINK_LIBS}
             ${LIB_FMU_TOOLKIT_LIBZIP_TARGET}
             ${LIB_FMU_TOOLKIT_EXTRA_LINK_LIBS}
