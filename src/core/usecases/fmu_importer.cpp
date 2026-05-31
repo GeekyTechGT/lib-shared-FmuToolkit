@@ -1,3 +1,7 @@
+/// @file fmu_importer.cpp
+/// @brief Implementation of the FmuImporter use case.
+/// @internal
+
 #include "fmu_importer.hpp"
 #include "core/exceptions/fmu_exception.hpp"
 

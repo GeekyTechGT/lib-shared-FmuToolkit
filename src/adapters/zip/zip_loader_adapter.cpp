@@ -1,3 +1,7 @@
+/// @file zip_loader_adapter.cpp
+/// @brief Implementation of the libzip-backed FMU loader (FR-01).
+/// @internal
+
 #include "zip_loader_adapter.hpp"
 #include "adapters/xml/model_description_parser.hpp"
 #include "core/exceptions/fmu_exception.hpp"

@@ -1,3 +1,7 @@
+/// @file simulation_controller.cpp
+/// @brief Implementation of the SimulationController use case (FR-04).
+/// @internal
+
 #include "simulation_controller.hpp"
 
 #include <cmath>

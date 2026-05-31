@@ -1,3 +1,7 @@
+/// @file fmu_model_description.cpp
+/// @brief Implementation of JSON model parsing and identifier sanitization (FR-08).
+/// @internal
+
 #include "fmu_model_description.hpp"
 
 #include "core/domain/fmu_variable_types.hpp"

@@ -1,3 +1,11 @@
+/// @file fmu_engine.cpp
+/// @brief PIMPL facade implementation of FmuEngine and FmuSession.
+/// @internal
+///
+/// Implements the public FmuEngine/FmuSession API by orchestrating the use-case
+/// and adapter layers, and maps internal domain types and exceptions to their
+/// public counterparts so that no internal type escapes the library boundary.
+
 // Public header MUST come first — FmuEngine.hpp declares class FmuEngine and
 // class FmuSession (with their forward-declared struct Impl). FmuEngineImpl.hpp
 // then provides the out-of-class definitions of those nested structs, which

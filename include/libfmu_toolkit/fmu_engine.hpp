@@ -46,12 +46,14 @@ namespace libfmu_toolkit {
 /// @note The FMU handle must **not** be unloaded via FmuEngine::unload() while
 ///       a session for that handle is still active — doing so is undefined
 ///       behaviour.
+/// @req FR-05.1
 class LIB_FMU_TOOLKIT_API FmuSession {
 public:
     /// @brief Terminates the FMU and releases all associated resources.
     ///
     /// Calls fmi*Terminate and fmi*FreeInstance on the FMU if the session is
     /// still active. Safe to call even if terminate() was already called.
+    /// @req FR-05.6
     ~FmuSession();
 
     /// @cond INTERNAL
@@ -60,13 +62,16 @@ public:
     /// @endcond
 
     /// @brief Move constructor.
+    /// @req NFR-02.2
     FmuSession(FmuSession&&)            noexcept;
     /// @brief Move-assignment operator.
+    /// @req NFR-02.2
     FmuSession& operator=(FmuSession&&) noexcept;
 
     /// @brief Returns the metadata of the loaded FMU.
     ///
     /// The returned reference is valid for the lifetime of the session.
+    /// @req FR-05.1
     [[nodiscard]] const FmuInfo& info() const noexcept;
 
     /// @brief Writes a `double` value to an input or parameter variable.
@@ -77,6 +82,7 @@ public:
     ///
     /// @throws std::out_of_range   if `varName` is not a variable in this FMU.
     /// @throws FmuSimulationError  on FMI runtime errors.
+    /// @req FR-05.3
     void setValue(std::string_view varName, double           value);
 
     /// @brief Writes an `int64_t` value to an input or parameter variable.
@@ -86,6 +92,7 @@ public:
     ///
     /// @throws std::out_of_range   if `varName` is unknown.
     /// @throws FmuSimulationError  on FMI runtime errors.
+    /// @req FR-05.3
     void setValue(std::string_view varName, int64_t          value);
 
     /// @brief Writes a `bool` value to an input or parameter variable.
@@ -95,6 +102,7 @@ public:
     ///
     /// @throws std::out_of_range   if `varName` is unknown.
     /// @throws FmuSimulationError  on FMI runtime errors.
+    /// @req FR-05.3
     void setValue(std::string_view varName, bool             value);
 
     /// @brief Writes a `std::string` value to an input or parameter variable.
@@ -104,6 +112,7 @@ public:
     ///
     /// @throws std::out_of_range   if `varName` is unknown.
     /// @throws FmuSimulationError  on FMI runtime errors.
+    /// @req FR-05.3
     void setValue(std::string_view varName, std::string_view value);
 
     /// @brief Reads the current value of any variable by name.
@@ -116,6 +125,7 @@ public:
     ///
     /// @throws std::out_of_range   if `varName` is unknown.
     /// @throws FmuSimulationError  on FMI runtime errors.
+    /// @req FR-05.4
     [[nodiscard]] OutputValue getValue(std::string_view varName) const;
 
     /// @brief Advances the FMU by one communication step.
@@ -129,6 +139,7 @@ public:
     ///          requests early termination (fmi*Discard or terminateSimulation).
     ///
     /// @throws FmuSimulationError on a fatal FMI error status.
+    /// @req FR-05.2
     [[nodiscard]] bool doStep(double currentTime, double stepSize);
 
     /// @brief Terminates the FMU co-simulation.
@@ -138,9 +149,11 @@ public:
     /// Safe to call multiple times — subsequent calls after the first are no-ops.
     ///
     /// @throws FmuSimulationError if termination fails at the FMI level.
+    /// @req FR-05.5
     void terminate();
 
     /// @brief Returns `true` if the session has been initialised and not yet terminated.
+    /// @req FR-05.1
     [[nodiscard]] bool isActive() const noexcept;
 
 private:
@@ -191,6 +204,7 @@ private:
 /// **Thread safety**
 /// `FmuEngine` is **not** thread-safe. Do not share an instance across threads
 /// without external synchronisation.
+/// @req FR-01.1
 class LIB_FMU_TOOLKIT_API FmuEngine {
 public:
     /// @brief Constructs a FmuEngine, optionally specifying where FMI XSD schemas live.
@@ -206,9 +220,11 @@ public:
     ///   the documentation on runtime XSD schema discovery for the priority order.
     /// @note Accepts any string-like type (`std::string`, `std::string_view`,
     ///       string literal) without allocation.
+    /// @req FR-07.1
     explicit FmuEngine(std::string_view xsdBasePath = {});
 
     /// @brief Destructor. Unloads all remaining FMU handles.
+    /// @req FR-01.6
     ~FmuEngine();
 
     /// @cond INTERNAL
@@ -217,8 +233,10 @@ public:
     /// @endcond
 
     /// @brief Move constructor.
+    /// @req NFR-02.2
     FmuEngine(FmuEngine&&)            noexcept;
     /// @brief Move-assignment operator.
+    /// @req NFR-02.2
     FmuEngine& operator=(FmuEngine&&) noexcept;
 
     /// @brief Loads an FMU from a file path.
@@ -235,6 +253,7 @@ public:
     ///
     /// @throws FmuLoadError        if the archive, DLL, or symbol resolution fails.
     /// @throws std::invalid_argument if the path is invalid or the file does not exist.
+    /// @req FR-01.1
     [[nodiscard]] uint64_t load(std::string_view fmuPath);
 
     /// @brief Returns the metadata of a loaded FMU.
@@ -243,6 +262,7 @@ public:
     /// @returns       FmuInfo populated from `modelDescription.xml`.
     ///
     /// @throws std::out_of_range  if `handle` was not returned by load().
+    /// @req FR-02.1
     [[nodiscard]] FmuInfo info(uint64_t handle) const;
 
     /// @brief Validates a loaded FMU through three phases.
@@ -264,6 +284,7 @@ public:
     /// @returns       Validation report with `passed` flag, errors, and warnings.
     ///
     /// @throws std::out_of_range  if `handle` is unknown.
+    /// @req FR-03.1
     [[nodiscard]] ValidationResult validate(uint64_t handle) const;
 
     /// @brief Runs a complete co-simulation lifecycle.
@@ -285,6 +306,7 @@ public:
     ///
     /// @throws FmuSimulationError  on fatal FMI errors during the simulation loop.
     /// @throws FmuLoadError        if the DLL cannot be re-loaded inside the adapter.
+    /// @req FR-04.1
     [[nodiscard]] SimResult simulate(
         uint64_t handle,
         const SimConfig& config,
@@ -307,6 +329,7 @@ public:
     ///                    Accepts any string-like type without allocation.
     ///
     /// @throws std::ios_base::failure  if the file cannot be opened or written.
+    /// @req FR-06.1
     static void exportCsv(const SimResult& result, std::string_view outputPath);
 
     /// @brief Exports a SimResult to a JSON file.
@@ -332,6 +355,7 @@ public:
     ///                    Accepts any string-like type without allocation.
     ///
     /// @throws std::ios_base::failure  if the file cannot be opened or written.
+    /// @req FR-06.2
     static void exportJson(const SimResult& result, std::string_view outputPath);
 
     /// @brief Initialises a FMU and returns an interactive session.
@@ -348,6 +372,7 @@ public:
     ///
     /// @throws FmuSimulationError  on FMU initialisation errors.
     /// @throws std::out_of_range   if `handle` is unknown.
+    /// @req FR-05.1
     [[nodiscard]] FmuSession openSession(uint64_t handle, const SimConfig& config);
 
     /// @brief Releases the FMU associated with a handle.
@@ -361,6 +386,7 @@ public:
     /// @param handle  Handle returned by load().
     ///
     /// @throws std::out_of_range  if `handle` is unknown.
+    /// @req FR-01.6
     void unload(uint64_t handle);
 
 private:

@@ -39,6 +39,7 @@ FMPy.
 20. [Building Manually with CMake](#building-manually-with-cmake)
 21. [CI — GitHub Actions](#ci--github-actions)
 22. [Troubleshooting](#troubleshooting)
+23. [Documentation & Requirements Traceability](#documentation--requirements-traceability)
 
 ---
 
@@ -55,8 +56,9 @@ FMPy.
 | Linux build | ✓ system GCC |
 | Docker build (Ubuntu 24.04) | ✓ |
 | WSL build | ✓ |
+| JSON-driven FMU artifact generation | ✓ `modelDescription.xml` + C accessors (see FR-08) |
 | Qt ABI compatibility | ✓ MinGW only — Clang presets removed intentionally |
-| 103 tests, Windows + Docker | ✓ |
+| 107 tests, Windows + Docker | ✓ 100 % passing |
 
 ---
 
@@ -70,6 +72,7 @@ include/                        ← Public API headers (deployed flat into inclu
 ├── exceptions.hpp
 ├── export.hpp
 ├── fmu_engine.hpp
+├── fmu_generation.hpp
 ├── lib_fmu_toolkit.hpp
 ├── types.hpp
 └── version.hpp
@@ -78,6 +81,7 @@ src/
 ├── core/
 │   ├── domain/                 ← Pure domain entities: FmuPackage, ModelVariable, …
 │   ├── usecases/               ← FmuImporter, FmuValidator, SimulationController, exporters
+│   ├── generation/             ← JSON-driven modelDescription.xml + C accessor builders
 │   └── exceptions/             ← Internal exception hierarchy
 ├── ports/                      ← Abstract interfaces: IFmuLoader, IXmlValidator, …
 ├── adapters/
@@ -85,7 +89,8 @@ src/
 │   ├── zip/                    ← libzip extractor
 │   ├── simulation/             ← FMI 2.0 and 3.0 dlopen adapter
 │   └── json/                   ← JSON result exporter (nlohmann/json, header-only)
-└── fmu_engine.cpp              ← PIMPL facade — the only file in the public boundary
+├── fmu_engine.cpp              ← PIMPL facade — the only file in the public boundary
+└── fmu_generation.cpp          ← PIMPL facade for the FMU generation API
 ```
 
 All public API symbols are hidden by default (`-fvisibility=hidden`); only those annotated
@@ -103,7 +108,7 @@ lib-fmu-toolkit/
 │   ├── unit/
 │   ├── integration/
 │   └── data/                   ← Generatore.fmu, Sommatore.fmu (Win + Linux binaries)
-├── examples/                   ← 01–06 example applications
+├── examples/                   ← 01–08 example applications
 ├── external/
 │   ├── fmi-standard-2.0/       ← FMI 2.0 XSD schemas + headers
 │   └── fmi-standard-3.0/       ← FMI 3.0 XSD schemas + headers
@@ -720,6 +725,12 @@ build\windows-mingw64-debug\bin\example_05_generatore_sommatore.exe ^
     tests\data\Generatore.fmu tests\data\Sommatore.fmu
 
 build\windows-mingw64-debug\bin\example_06_batch_validate.exe tests\data\
+
+build\windows-mingw64-debug\bin\example_07_generate_from_json.exe ^
+    data\generation\fmi3_from_json_example.json out_dir
+
+build\windows-mingw64-debug\bin\example_08_generate_selective.exe ^
+    data\generation\fmi2_from_json_example.json out_dir
 ```
 
 | Example | Description |
@@ -730,6 +741,8 @@ build\windows-mingw64-debug\bin\example_06_batch_validate.exe tests\data\
 | `04_export_results` | Simulate and export the result series to JSON |
 | `05_generatore_sommatore` | Two-FMU composition: feed the ramp generator's output into the adder |
 | `06_batch_validate` | Scan a directory for `.fmu` files and validate each one |
+| `07_generate_from_json` | Generate `modelDescription.xml` + C accessors from a JSON model definition (FR-08) |
+| `08_generate_selective` | Generate only the XML or only the C source via `FmuArtifactGenerator` options (FR-08) |
 
 ---
 
@@ -1116,3 +1129,36 @@ If `ld.exe` reports `undefined reference` errors, the object files exist but som
 files were not compiled (check for compilation errors earlier in the build log). If `ld.exe`
 reports `file truncated` on `/dev/null`, your MSYS2 terminal is trying to write to the
 MSYS `/dev/null` device — always use a real file path as the output target.
+
+---
+
+## Documentation & Requirements Traceability
+
+The full technical documentation lives under [`docs/`](docs/README.md):
+
+| Area | Document |
+|---|---|
+| Requirements | [`docs/requirements/srs.md`](docs/requirements/srs.md) — functional/non-functional requirements with stable `FR`/`NFR`/`C` identifiers |
+| Traceability | [`docs/requirements/traceability.md`](docs/requirements/traceability.md) — requirement ↔ source ↔ test matrix |
+| Architecture | [`docs/architecture/architecture.md`](docs/architecture/architecture.md) — hexagonal layer map and data flow |
+| API reference | [`docs/reference/api_reference.md`](docs/reference/api_reference.md) — public API, including the FMU generation API |
+| Validation | [`docs/reference/validation.md`](docs/reference/validation.md) — the three-phase validation pipeline |
+| Decisions | [`docs/adr/`](docs/adr/) — Architecture Decision Records (ADR-0001 … ADR-0005) |
+
+### Using lib-fmu-toolkit in a safety-related (ISO 26262) context
+
+Every requirement in the SRS carries a stable identifier and is traced to the
+source unit(s) that implement it and the automated test(s) that verify it — see
+the [traceability matrix](docs/requirements/traceability.md). Each internal
+source file additionally references its requirement IDs in its Doxygen header
+(`@file` / `@par Requirements`), so the requirement → code link is visible
+directly in the code and in the generated Doxygen.
+
+The verification suite (`ctest`) currently runs **107 tests at 100 % pass**. The
+traceability document also records the known coverage gaps where additional
+isolated tests are recommended to strengthen the verification argument.
+
+> The library is integrated as a component of `app-orchestrix`. Its public API
+> (`FmuEngine`, `FmuSession`, the `types.hpp` value types, and the
+> `fmu_generation.hpp` generators) is treated as a stable contract; see the SRS
+> non-functional requirements **NFR-02.x** for the API/ABI stability guarantees.

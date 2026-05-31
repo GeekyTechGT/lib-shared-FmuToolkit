@@ -1,0 +1,48 @@
+# Doxyfile for lib-fmu-toolkit
+#
+# Minimal configuration. Doxygen fills every unset option with its default, so
+# only the project-specific and traceability-relevant settings appear here.
+#
+# Generate the documentation with:
+#   doxygen docs/Doxyfile
+# (run from the repository root). Output lands in build/doxygen/.
+
+PROJECT_NAME           = "lib-fmu-toolkit"
+PROJECT_BRIEF          = "C++ toolkit for loading, validating, and simulating FMI 2.0/3.0 FMUs"
+OUTPUT_DIRECTORY       = build/doxygen
+
+# --- Inputs -----------------------------------------------------------------
+INPUT                  = include src docs/requirements
+FILE_PATTERNS          = *.hpp *.cpp *.h *.md
+RECURSIVE              = YES
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+EXTRACT_ANON_NSPACES   = YES
+
+# Treat the internal headers as documentable even though they are marked
+# @internal (so the traceability picture is complete for an assessor).
+INTERNAL_DOCS          = YES
+
+# --- Source browsing --------------------------------------------------------
+SOURCE_BROWSER         = YES
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+
+# --- Requirements traceability ---------------------------------------------
+# `@req FR-01.3` attaches the entity to the aggregated "Requirements
+# Traceability" page and prints "Requirements: FR-01.3" inline. Because it is an
+# @xrefitem, Doxygen builds a back-linked index of every class/function/method
+# grouped by the requirement(s) it satisfies — the code->requirement view that
+# complements docs/requirements/traceability.md.
+ALIASES                = "req=@xrefitem req_trace \"Requirements\" \"Requirements Traceability\""
+
+# Keep the Markdown SRS/traceability docs as part of the generated output.
+USE_MDFILE_AS_MAINPAGE = docs/requirements/traceability.md
+
+# --- Output -----------------------------------------------------------------
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+GENERATE_TREEVIEW      = YES
+WARN_IF_UNDOCUMENTED   = NO
+QUIET                  = YES

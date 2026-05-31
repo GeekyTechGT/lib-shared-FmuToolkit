@@ -1,3 +1,7 @@
+/// @file libxml2_validator_adapter.cpp
+/// @brief Implementation of XSD schema validation via libxml2 (FR-03.5).
+/// @internal
+
 #include "libxml2_validator_adapter.hpp"
 
 #include <libxml/parser.h>

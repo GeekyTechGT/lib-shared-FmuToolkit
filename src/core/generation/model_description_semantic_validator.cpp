@@ -1,3 +1,7 @@
+/// @file model_description_semantic_validator.cpp
+/// @brief Implementation of semantic validation for generated models (FR-08).
+/// @internal
+
 #include "fmu_model_description.hpp"
 
 #include "core/domain/fmu_variable_types.hpp"

@@ -346,3 +346,63 @@ itself encounters an unexpected error.
 using ParameterValue = std::variant<double, int64_t, bool, std::string>;
 using OutputValue    = std::variant<double, int64_t, bool, std::string>;
 ```
+
+---
+
+## FMU Generation API
+
+Header: `<libfmu_toolkit/fmu_generation.hpp>` (also pulled in by the umbrella header).
+This API generates FMI artifacts from a JSON model definition. It does **not**
+compile binaries or assemble a `.fmu` ZIP container (see constraint C-05).
+Requirements: **FR-08**.
+
+### `ModelDescriptionGenerator`
+
+Generates a validated `modelDescription.xml` from a JSON definition.
+
+```cpp
+libfmu_toolkit::ModelDescriptionGenerator gen;
+
+// Return the XML as a string.
+std::string xml = gen.generateFromJson("model.json");
+
+// Or write it to disk and get the resulting path back.
+std::filesystem::path out =
+    gen.writeFromJson("model.json", "out_dir", "modelDescription.xml", /*overwrite=*/true);
+```
+
+The generated document is checked by the library's own semantic validator before
+it is returned; a semantic violation throws `FmuValidationError`.
+
+### `FmiCCodeGenerator`
+
+Generates FMI-oriented C getter/setter accessor source from the same JSON
+definition. Identifiers are sanitised from the model and variable names.
+
+```cpp
+libfmu_toolkit::FmiCCodeGenerator codeGen;
+std::string cSource = codeGen.generateFromJson("model.json");
+// When fileName is empty, writeFromJson derives "<modelIdentifier>_accessors.c".
+std::filesystem::path c = codeGen.writeFromJson("model.json", "out_dir");
+```
+
+### `FmuArtifactGenerator`
+
+Façade that can emit only the XML, only the C source, or both, controlled by
+`FmuArtifactGenerationOptions`.
+
+```cpp
+libfmu_toolkit::FmuArtifactGenerationOptions opts;
+opts.outputDirectory          = "out_dir";
+opts.generateModelDescription = true;   // emit modelDescription.xml
+opts.generateCSource          = true;   // emit the C accessor source
+opts.overwrite                = true;
+
+libfmu_toolkit::FmuArtifactGenerator generator;
+libfmu_toolkit::GeneratedArtifactPaths paths =
+    generator.generateFromJson("model.json", opts);
+// paths.modelDescriptionXmlPath, paths.cSourcePath
+```
+
+See the worked examples `examples/07_generate_from_json` and
+`examples/08_generate_selective`.

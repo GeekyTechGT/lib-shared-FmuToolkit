@@ -1,3 +1,7 @@
+/// @file standalone_simulation_adapter.cpp
+/// @brief Implementation of the in-process FMI co-simulation backend (FR-04, FR-05).
+/// @internal
+
 #include "standalone_simulation_adapter.hpp"
 #include "core/exceptions/fmu_exception.hpp"
 

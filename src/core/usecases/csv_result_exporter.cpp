@@ -1,3 +1,7 @@
+/// @file csv_result_exporter.cpp
+/// @brief Implementation of CSV result export (FR-06.1, FR-06.3).
+/// @internal
+
 #include "csv_result_exporter.hpp"
 
 #include <fstream>

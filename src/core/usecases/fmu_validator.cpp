@@ -1,3 +1,7 @@
+/// @file fmu_validator.cpp
+/// @brief Implementation of the three-phase FmuValidator use case (FR-03).
+/// @internal
+
 #include "fmu_validator.hpp"
 #include "core/generation/fmu_model_description.hpp"
 #include "core/exceptions/fmu_exception.hpp"

@@ -31,6 +31,7 @@ namespace libfmu_toolkit {
 ///
 /// Passed via SimConfig::logLevel. The FMU itself decides how to interpret the
 /// level; not all FMUs honour all levels.
+/// @req FR-04.1
 enum class LogLevel : uint8_t {
     None,       ///< Suppress all log output from the FMU.
     Warning,    ///< Log warnings only (default).
@@ -40,6 +41,7 @@ enum class LogLevel : uint8_t {
 };
 
 /// @brief FMI specification version of a loaded FMU.
+/// @req FR-01.4
 enum class FmiVersion : uint8_t {
     FMI2 = 2, ///< Functional Mock-up Interface 2.0.
     FMI3 = 3  ///< Functional Mock-up Interface 3.0.
@@ -48,6 +50,7 @@ enum class FmiVersion : uint8_t {
 /// @brief Causality of a model variable as defined in FMI.
 ///
 /// Describes the role of a variable in the model's interface contract.
+/// @req FR-02.2
 enum class Causality : uint8_t {
     Parameter,            ///< Tunable / fixed parameter; set before initialization.
     CalculatedParameter,  ///< Parameter whose value is calculated during initialization.
@@ -60,6 +63,7 @@ enum class Causality : uint8_t {
 /// @brief Variability of a model variable as defined in FMI.
 ///
 /// Describes how and when a variable's value can change during simulation.
+/// @req FR-02.2
 enum class Variability : uint8_t {
     Constant,    ///< Constant throughout the simulation (never changes).
     Fixed,       ///< Fixed after initialization; cannot be changed during simulation.
@@ -72,6 +76,7 @@ enum class Variability : uint8_t {
 ///
 /// FMI 2.0 defines Real, Integer, Boolean, and String. FMI 3.0 extends this
 /// with Float32/64, Int8/16/32/64, UInt8/16/32/64, Binary, and Clock.
+/// @req FR-02.2
 enum class DataType : uint8_t {
     Real,    ///< FMI 2.0 real (64-bit float).
     Integer, ///< FMI 2.0 integer (platform int).
@@ -92,6 +97,7 @@ enum class DataType : uint8_t {
 };
 
 /// @brief Initialization source of a model variable's start value.
+/// @req FR-02.2
 enum class Initial : uint8_t {
     Exact,       ///< The start value is the exact initial value.
     Approx,      ///< The start value is an approximation; solver may refine it.
@@ -107,6 +113,7 @@ enum class Initial : uint8_t {
 ///
 /// Returned as part of ValidationIssue so callers can filter or display
 /// diagnostics by phase without parsing the message text.
+/// @req FR-03.1
 enum class ValidationCategory : uint8_t {
     Structure, ///< Phase 1 — archive layout and binary directory naming.
     Schema,    ///< Phase 2 — XSD schema validation of modelDescription.xml.
@@ -121,6 +128,7 @@ enum class ValidationCategory : uint8_t {
 ///
 /// SI conversion follows the affine formula:
 /// @f$ \text{value}_{SI} = \text{factor} \times \text{value} + \text{offset} @f$
+/// @req FR-02.4
 struct LIB_FMU_TOOLKIT_API UnitInfo {
     std::string name;        ///< Unit name as declared in the XML, e.g. `"m/s2"`, `"rad/s"`.
     double      factor{1.0}; ///< Multiplicative SI conversion factor (default: 1.0).
@@ -135,6 +143,7 @@ struct LIB_FMU_TOOLKIT_API UnitInfo {
 ///
 /// Named types provide reusable attribute sets (unit, quantity, min/max constraints)
 /// that individual variables may reference via their `declaredType` attribute.
+/// @req FR-02.4
 struct LIB_FMU_TOOLKIT_API TypeDefinitionInfo {
     std::string name;        ///< Declared type name, referenced by VariableInfo::typeName.
     std::string description; ///< Human-readable description.
@@ -156,6 +165,7 @@ struct LIB_FMU_TOOLKIT_API TypeDefinitionInfo {
 /// override them in SimConfig. The `has*` flags indicate which attributes
 /// were actually present in the XML; absent attributes retain their default
 /// numeric values but should not be treated as meaningful.
+/// @req FR-02.5
 struct LIB_FMU_TOOLKIT_API DefaultExperiment {
     double startTime{0.0};  ///< Recommended simulation start time.
     double stopTime{1.0};   ///< Recommended simulation stop time.
@@ -175,6 +185,7 @@ struct LIB_FMU_TOOLKIT_API DefaultExperiment {
 ///
 /// Populated from `modelDescription.xml` during FmuEngine::load(). All fields
 /// are read-only reflections of the XML content.
+/// @req FR-02.2
 struct LIB_FMU_TOOLKIT_API VariableInfo {
     std::string name;                         ///< Unique variable name within the FMU.
     std::string description;                  ///< Human-readable description (may be empty).
@@ -196,6 +207,7 @@ struct LIB_FMU_TOOLKIT_API VariableInfo {
 ///
 /// Returned by FmuEngine::info(). All fields are immutable snapshots of the
 /// XML content at load time.
+/// @req FR-02.1
 struct LIB_FMU_TOOLKIT_API FmuInfo {
     std::string modelName;                 ///< Model name as declared in the XML.
     std::string modelIdentifier;           ///< Model identifier used to name the shared library.
@@ -213,14 +225,17 @@ struct LIB_FMU_TOOLKIT_API FmuInfo {
 
     /// @brief Returns pointers to all variables with `causality == Input`.
     /// @returns Vector of non-owning pointers; valid for the lifetime of this FmuInfo.
+    /// @req FR-02.3
     std::vector<const VariableInfo*> inputs() const;
 
     /// @brief Returns pointers to all variables with `causality == Output`.
     /// @returns Vector of non-owning pointers; valid for the lifetime of this FmuInfo.
+    /// @req FR-02.3
     std::vector<const VariableInfo*> outputs() const;
 
     /// @brief Returns pointers to all variables with `causality == Parameter`.
     /// @returns Vector of non-owning pointers; valid for the lifetime of this FmuInfo.
+    /// @req FR-02.3
     std::vector<const VariableInfo*> parameters() const;
 
     /// @brief Finds a variable by name.
@@ -231,6 +246,7 @@ struct LIB_FMU_TOOLKIT_API FmuInfo {
     ///
     /// @param name Variable name to search for.
     /// @returns Pointer to the matching VariableInfo, or `nullptr` if not found.
+    /// @req FR-02.3
     const VariableInfo* findVariable(std::string_view name) const;
 };
 
@@ -243,6 +259,7 @@ struct LIB_FMU_TOOLKIT_API FmuInfo {
 /// `category` identifies which phase produced this entry. Line and column
 /// numbers are populated for XSD schema errors (sourced from libxml2).
 /// Structural and semantic checks leave them at their default `-1`.
+/// @req FR-03.5
 struct LIB_FMU_TOOLKIT_API ValidationIssue {
     ValidationCategory category{ValidationCategory::Structure}; ///< Phase that produced this entry.
     std::string message; ///< Human-readable description of the issue.
@@ -259,6 +276,7 @@ struct LIB_FMU_TOOLKIT_API ValidationIssue {
 /// Contains the overall pass/fail verdict plus lists of errors and warnings
 /// from all three validation phases (structural, XSD schema, semantic).
 /// FmuEngine::validate() never throws — all findings are reported here.
+/// @req FR-03.1
 struct LIB_FMU_TOOLKIT_API ValidationResult {
     bool passed{false}; ///< `true` if all phases passed with no errors.
     std::vector<ValidationIssue> errors;   ///< Error-level issues (cause `passed == false`).
@@ -268,12 +286,14 @@ struct LIB_FMU_TOOLKIT_API ValidationResult {
     ///
     /// Implemented out-of-line in the library to avoid inline STL container
     /// access across translation unit boundaries (ABI stability).
+    /// @req FR-03.8
     [[nodiscard]] bool hasErrors()   const noexcept;
 
     /// @brief Returns `true` if there is at least one warning.
     ///
     /// Implemented out-of-line in the library to avoid inline STL container
     /// access across translation unit boundaries (ABI stability).
+    /// @req FR-03.1
     [[nodiscard]] bool hasWarnings() const noexcept;
 };
 
@@ -285,12 +305,14 @@ struct LIB_FMU_TOOLKIT_API ValidationResult {
 ///
 /// Holds one of `double`, `int64_t`, `bool`, or `std::string`, matching the
 /// four fundamental FMI variable types.
+/// @req FR-04.3
 using ParameterValue = std::variant<double, int64_t, bool, std::string>;
 
 /// @brief Configuration for a co-simulation run.
 ///
 /// Passed to FmuEngine::simulate() or FmuEngine::openSession() to specify
 /// timing, tolerances, initial values, and recording policy.
+/// @req FR-04.1
 struct LIB_FMU_TOOLKIT_API SimConfig {
     double   startTime{0.0};    ///< Simulation start time (seconds).
     double   stopTime{1.0};     ///< Simulation stop time (seconds).
@@ -325,12 +347,14 @@ struct LIB_FMU_TOOLKIT_API SimConfig {
 ///
 /// Holds one of `double`, `int64_t`, `bool`, or `std::string`, matching the
 /// four fundamental FMI variable types.
+/// @req FR-04.6
 using OutputValue = std::variant<double, int64_t, bool, std::string>;
 
 /// @brief Time-series result of a completed co-simulation run.
 ///
 /// Returned by FmuEngine::simulate(). Can be exported to CSV via
 /// FmuEngine::exportCsv() or to JSON via FmuEngine::exportJson().
+/// @req FR-04.6
 struct LIB_FMU_TOOLKIT_API SimResult {
     /// @brief Recorded time points, one per recording interval.
     std::vector<double> timePoints;
@@ -344,11 +368,13 @@ struct LIB_FMU_TOOLKIT_API SimResult {
     /// @brief Returns the number of recorded time points.
     ///
     /// Implemented out-of-line in the library (ABI stability).
+    /// @req FR-04.6
     [[nodiscard]] size_t stepCount() const noexcept;
 
     /// @brief Returns `true` if no time points were recorded.
     ///
     /// Implemented out-of-line in the library (ABI stability).
+    /// @req FR-04.6
     [[nodiscard]] bool   empty()     const noexcept;
 };
 

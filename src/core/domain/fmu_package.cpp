@@ -1,3 +1,7 @@
+/// @file fmu_package.cpp
+/// @brief Implementation of FmuPackage causality filters and variable lookup.
+/// @internal
+
 #include "fmu_package.hpp"
 
 namespace libfmu_toolkit {

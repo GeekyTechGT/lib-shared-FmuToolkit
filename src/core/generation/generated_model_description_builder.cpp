@@ -1,3 +1,7 @@
+/// @file generated_model_description_builder.cpp
+/// @brief Implementation of modelDescription.xml generation from a JSON model (FR-08).
+/// @internal
+
 #include "fmu_model_description.hpp"
 
 #include "core/domain/fmu_variable_types.hpp"

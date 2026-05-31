@@ -1,15 +1,14 @@
 #pragma once
 
-// ---------------------------------------------------------------------------
-// FmuVariableTypes.hpp — internal header
-//
-// The canonical enum definitions (FmiVersion, Causality, Variability,
-// Initial, DataType) live in the public API header <libfmu_toolkit/types.hpp>.
-// This header re-exports them plus adds internal helpers (to_string, isFmi3Only)
-// that are NOT part of the public API.
-//
-// Including this file from internal code gives both the enums and the helpers.
-// ---------------------------------------------------------------------------
+/// @file fmu_variable_types.hpp
+/// @brief Internal re-export of the public FMI enums plus stringification helpers.
+/// @internal
+///
+/// The canonical enum definitions (FmiVersion, Causality, Variability, Initial,
+/// DataType) live in the public API header `<libfmu_toolkit/types.hpp>`. This
+/// internal header re-exports them and adds `constexpr` helpers (`to_string`,
+/// `isFmi3Only`) that are **not** part of the public API. Including this file
+/// from internal code provides both the enums and the helpers in one place.
 
 #include <libfmu_toolkit/types.hpp>   // FmiVersion, Causality, Variability, Initial, DataType
 
@@ -21,6 +20,8 @@ namespace libfmu_toolkit {
 // constexpr helpers — human-readable names (internal use only)
 // ---------------------------------------------------------------------------
 
+/// @brief Returns the canonical FMI string name of an FMI version (`"FMI2"`/`"FMI3"`).
+/// @req FR-01.4
 [[nodiscard]] constexpr std::string_view to_string(FmiVersion v) noexcept {
     switch (v) {
         case FmiVersion::FMI2: return "FMI2";
@@ -29,6 +30,8 @@ namespace libfmu_toolkit {
     return "Unknown";
 }
 
+/// @brief Returns the FMI XML spelling of a causality (e.g. `"input"`, `"output"`).
+/// @req FR-02.2
 [[nodiscard]] constexpr std::string_view to_string(Causality c) noexcept {
     switch (c) {
         case Causality::Parameter:           return "parameter";
@@ -41,6 +44,8 @@ namespace libfmu_toolkit {
     return "unknown";
 }
 
+/// @brief Returns the FMI XML spelling of a variability (e.g. `"continuous"`, `"tunable"`).
+/// @req FR-02.2
 [[nodiscard]] constexpr std::string_view to_string(Variability v) noexcept {
     switch (v) {
         case Variability::Constant:   return "constant";
@@ -52,6 +57,8 @@ namespace libfmu_toolkit {
     return "unknown";
 }
 
+/// @brief Returns the FMI XML spelling of an initial kind (e.g. `"exact"`, `"calculated"`).
+/// @req FR-02.2
 [[nodiscard]] constexpr std::string_view to_string(Initial i) noexcept {
     switch (i) {
         case Initial::Exact:      return "exact";
@@ -62,6 +69,8 @@ namespace libfmu_toolkit {
     return "unknown";
 }
 
+/// @brief Returns the FMI type name of a data type (e.g. `"Real"`, `"Float64"`, `"UInt32"`).
+/// @req FR-02.2
 [[nodiscard]] constexpr std::string_view to_string(DataType dt) noexcept {
     switch (dt) {
         case DataType::Real:    return "Real";
@@ -84,6 +93,10 @@ namespace libfmu_toolkit {
     return "unknown";
 }
 
+/// @brief Reports whether a data type exists only in FMI 3.0 (not representable in FMI 2.0).
+/// @param dt Data type to classify.
+/// @returns `true` for FMI 3.0-only types (Float32/64, sized ints, Binary, Clock).
+/// @req FR-02.2
 [[nodiscard]] constexpr bool isFmi3Only(DataType dt) noexcept {
     switch (dt) {
         case DataType::Float64: case DataType::Float32:

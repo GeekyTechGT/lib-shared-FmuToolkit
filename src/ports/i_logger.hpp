@@ -1,5 +1,9 @@
 #pragma once
 
+/// @file i_logger.hpp
+/// @brief Port interface for receiving library log messages.
+/// @internal
+
 #include <libfmu_toolkit/types.hpp>  // LogLevel
 #include <string>
 
@@ -19,6 +23,7 @@ namespace libfmu_toolkit {
 ///     }
 /// };
 /// @endcode
+/// @req FR-04.1
 class ILogger {
 public:
     virtual ~ILogger() = default;
@@ -30,15 +35,18 @@ public:
     ///
     /// @param level    Severity level of the message.
     /// @param message  Human-readable log message.
+    /// @req FR-04.1
     virtual void log(LogLevel level, const std::string& message) = 0;
 };
 
 /// @brief Default logger that silently discards all messages.
 ///
 /// Used as the fallback when no custom logger is injected.
+/// @req FR-04.1
 class NullLogger final : public ILogger {
 public:
     /// @brief No-op: discards `level` and `message`.
+    /// @req FR-04.1
     void log(LogLevel /*level*/, const std::string& /*message*/) override {}
 };
 

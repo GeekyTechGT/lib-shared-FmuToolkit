@@ -1,5 +1,13 @@
 #pragma once
 
+/// @file fmu_engine_impl.hpp
+/// @brief PIMPL bodies and internal↔public mapping helpers for the FmuEngine facade.
+/// @internal
+///
+/// Defines FmuEngine::Impl and FmuSession::Impl plus the `detail::` free
+/// functions that translate between internal domain types and the public API
+/// types, and the XSD schema discovery logic (FR-07).
+
 #include "core/domain/fmu_package.hpp"
 #include "core/domain/simulation_config.hpp"
 #include "core/domain/simulation_result.hpp"
@@ -36,6 +44,8 @@ namespace libfmu_toolkit {
 
 namespace detail {
 
+/// @brief Renders a domain StartValue variant as a string for VariableInfo.
+/// @req FR-02.2
 inline std::string startValueToStr(const StartValue& sv) {
     return std::visit([](auto&& arg) -> std::string {
         using T = std::decay_t<decltype(arg)>;
@@ -46,6 +56,8 @@ inline std::string startValueToStr(const StartValue& sv) {
     }, sv);
 }
 
+/// @brief Maps an internal ModelVariable to the public VariableInfo.
+/// @req FR-02.2
 inline VariableInfo toPublicVar(const ModelVariable& mv)
 {
     VariableInfo vi;
@@ -64,6 +76,8 @@ inline VariableInfo toPublicVar(const ModelVariable& mv)
     return vi;
 }
 
+/// @brief Maps an internal FmuPackage to the public FmuInfo.
+/// @req FR-02.1
 inline FmuInfo toPublicInfo(const FmuPackage& pkg)
 {
     FmuInfo info;
@@ -119,6 +133,8 @@ inline FmuInfo toPublicInfo(const FmuPackage& pkg)
     return info;
 }
 
+/// @brief Maps an internal ValidationReport to the public ValidationResult.
+/// @req FR-03.1
 inline ValidationResult toPublicReport(const ValidationReport& vr)
 {
     ValidationResult result;
@@ -134,6 +150,8 @@ inline ValidationResult toPublicReport(const ValidationReport& vr)
     return result;
 }
 
+/// @brief Maps the public SimConfig to the internal SimulationConfig.
+/// @req FR-04.1
 inline SimulationConfig toInternalConfig(const SimConfig& pub)
 {
     SimulationConfig cfg;
@@ -147,6 +165,8 @@ inline SimulationConfig toInternalConfig(const SimConfig& pub)
     return cfg;
 }
 
+/// @brief Maps the internal SimulationResult to the public SimResult.
+/// @req FR-04.6
 inline SimResult toPublicResult(const SimulationResult& sr)
 {
     SimResult result;
@@ -155,12 +175,16 @@ inline SimResult toPublicResult(const SimulationResult& sr)
     return result;
 }
 
+/// @brief Returns `true` if both FMI 2.0 and 3.0 XSD schema trees exist under @p basePath.
+/// @req FR-07.2
 inline bool schemaTreeExists(const std::filesystem::path& basePath)
 {
     return std::filesystem::exists(basePath / "fmi-standard-2.0" / "schema" / "fmi2ModelDescription.xsd")
         && std::filesystem::exists(basePath / "fmi-standard-3.0" / "schema" / "fmi3ModelDescription.xsd");
 }
 
+/// @brief Reads a filesystem path from the named environment variable, if set.
+/// @req FR-07.1
 inline std::optional<std::filesystem::path> pathFromEnvironment(const char* name)
 {
     const char* value = std::getenv(name);
@@ -170,6 +194,8 @@ inline std::optional<std::filesystem::path> pathFromEnvironment(const char* name
     return std::filesystem::path(value);
 }
 
+/// @brief Returns the directory containing this shared library module.
+/// @req FR-07.1
 inline std::optional<std::filesystem::path> moduleDirectory()
 {
 #if defined(_WIN32)
@@ -204,6 +230,8 @@ inline std::optional<std::filesystem::path> moduleDirectory()
 #endif
 }
 
+/// @brief Resolves the XSD schema base path using the FR-07.1 priority order.
+/// @req FR-07.1
 inline std::filesystem::path resolveDefaultSchemaBasePath()
 {
     std::vector<std::filesystem::path> candidates;
@@ -241,6 +269,7 @@ inline std::filesystem::path resolveDefaultSchemaBasePath()
 // that an alternative backend can be injected in tests or custom integrations.
 // The default constructor wires the production StandaloneSimulationAdapter.
 // ---------------------------------------------------------------------------
+/// @req FR-05.1
 struct FmuSession::Impl {
     std::unique_ptr<ISimulationBackend> backend;
     FmuInfo                             info;
@@ -270,11 +299,14 @@ struct FmuSession::Impl {
 // ZipLoaderAdapter is created per-load so each FMU gets its own extraction
 // directory and OS library handle lifetime.
 // ---------------------------------------------------------------------------
+/// @req FR-01.1
 struct FmuEngine::Impl {
     std::filesystem::path         xsdBasePath;
     std::unique_ptr<IXmlValidator> xmlValidator;
     uint64_t                       nextHandleId{1};
 
+    /// @brief One loaded FMU: its loader adapter and parsed package.
+    /// @req FR-01.6
     struct Entry {
         std::unique_ptr<IFmuLoader> loader;
         FmuPackage pkg;
@@ -307,14 +339,17 @@ struct FmuEngine::Impl {
         , xmlValidator(std::move(validator))
     {}
 
+    /// @brief Directory holding the FMI 2.0 XSD schema. @req FR-07.2
     [[nodiscard]] std::filesystem::path fmi2SchemaDir() const {
         return xsdBasePath / "fmi-standard-2.0" / "schema";
     }
 
+    /// @brief Directory holding the FMI 3.0 XSD schema. @req FR-07.2
     [[nodiscard]] std::filesystem::path fmi3SchemaDir() const {
         return xsdBasePath / "fmi-standard-3.0" / "schema";
     }
 
+    /// @brief Looks up a loaded entry by handle. @throws std::out_of_range if unknown. @req FR-01.6
     Entry& getEntry(uint64_t handle) {
         auto it = entries.find(handle);
         if (it == entries.end())
@@ -322,6 +357,7 @@ struct FmuEngine::Impl {
         return it->second;
     }
 
+    /// @brief Const overload of getEntry(). @req FR-01.6
     const Entry& getEntry(uint64_t handle) const {
         auto it = entries.find(handle);
         if (it == entries.end())

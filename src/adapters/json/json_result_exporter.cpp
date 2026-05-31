@@ -1,3 +1,7 @@
+/// @file json_result_exporter.cpp
+/// @brief Implementation of hand-written JSON result export (FR-06.2, FR-06.3).
+/// @internal
+
 #include "json_result_exporter.hpp"
 
 #include <fstream>

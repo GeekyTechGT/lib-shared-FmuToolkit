@@ -1,8 +1,15 @@
 # Software Requirements Specification — lib-fmu-toolkit
 
-**Version:** 1.0  
-**Date:** 2026-04-15  
+**Version:** 1.1  
+**Date:** 2026-05-31  
 **Status:** Baseline
+
+> Each requirement below carries a stable identifier (FR-xx / NFR-xx / C-xx).
+> The mapping from these identifiers to the implementing source files and the
+> verifying tests is maintained in [traceability.md](traceability.md). Every
+> requirement is intended to be **traceable** to at least one source unit and,
+> where applicable, one or more automated tests — supporting the verification
+> evidence expected by ISO 26262 software development.
 
 ---
 
@@ -113,6 +120,17 @@ The library does **not** provide a graphical interface, a co-simulation master p
 | FR-07.1 | When `FmuEngine` is constructed without an explicit `xsdBasePath`, the library shall auto-discover the XSD schema trees in this priority order: (1) `LIB_FMU_TOOLKIT_XSD_BASE` environment variable; (2) compile-time source `external/` path; (3) `<module_dir>/../share/lib-fmu-toolkit/schemas`; (4) `${cwd}/external`. |
 | FR-07.2 | The library shall require both `fmi-standard-2.0/schema/fmi2ModelDescription.xsd` and `fmi-standard-3.0/schema/fmi3ModelDescription.xsd` to be present under the resolved base path. |
 
+### FR-08 — JSON-Driven FMU Artifact Generation
+
+| ID | Requirement |
+| --- | --- |
+| FR-08.1 | The library shall parse a JSON model definition file describing an FMU (model metadata, units, type definitions, default experiment, and variables) into an in-memory model. |
+| FR-08.2 | `ModelDescriptionGenerator` shall generate a well-formed `modelDescription.xml` (FMI 2.0 or FMI 3.0, per the JSON `fmiVersion`) from the parsed JSON definition. |
+| FR-08.3 | The generated `modelDescription.xml` shall pass the library's own semantic validation before it is returned or written to disk; semantic violations shall raise `FmuValidationError`. |
+| FR-08.4 | `FmiCCodeGenerator` shall generate C getter/setter accessor source code for the variables declared in the JSON definition, using sanitized C identifiers derived from the model and variable names. |
+| FR-08.5 | FMI 3.0 array variables (variables with non-empty `dimensions`) shall be generated as arrays without scalar expansion. |
+| FR-08.6 | `FmuArtifactGenerator` shall act as a façade able to emit only the XML, only the C source, or both, honouring the output directory, file names, and overwrite flags in `FmuArtifactGenerationOptions`. |
+
 ---
 
 ## 3. Non-Functional Requirements
@@ -122,8 +140,8 @@ The library does **not** provide a graphical interface, a co-simulation master p
 | ID | Requirement |
 | --- | --- |
 | NFR-01.1 | The library shall be written in C++20. |
-| NFR-01.2 | Supported compilers: GCC ≥ 11, Clang ≥ 13. MSVC is explicitly not supported (see ADR-0003). |
-| NFR-01.3 | On Windows, only MSYS2/MinGW toolchains shall be supported (`mingw64`, `clang64` environments). |
+| NFR-01.2 | The validated reference compiler is GCC/MinGW ≥ 11 (the only toolchain exercised by `CMakePresets.json`). MSVC is explicitly not supported (see ADR-0003). |
+| NFR-01.3 | On Windows, only the MSYS2/MinGW toolchains shall be supported (`mingw32`, `mingw64` environments) — required for Qt ABI compatibility with consumer applications. |
 | NFR-01.4 | On Linux, native GCC and Clang system installations shall be supported. |
 | NFR-01.5 | The library shall compile without warnings under `-Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wshadow`. |
 
@@ -163,10 +181,10 @@ The library does **not** provide a graphical interface, a co-simulation master p
 | --- | --- |
 | NFR-05.1 | The build system shall use CMake ≥ 3.25 with preset support (`CMakePresets.json`). |
 | NFR-05.2 | The library shall build both shared (`SHARED`) and static (`STATIC`) targets. |
-| NFR-05.3 | Dependencies (`libxml2`, `libzip`) shall be resolvable via either vcpkg or system package managers. |
+| NFR-05.3 | Dependencies (`libxml2`, `libzip`) shall be resolvable via the MSYS2/pkg-config toolchain; user dependencies shall be resolvable through the `_shared_lib` mechanism declared in `project.json`. `nlohmann_json` shall be fetched via CMake `FetchContent`. |
 | NFR-05.4 | When `LIB_FMU_TOOLKIT_MINGW_STATIC_RUNTIME=ON`, the MinGW C++ runtime shall be linked statically, producing self-contained binaries. |
 | NFR-05.5 | All presets shall set `CMAKE_EXPORT_COMPILE_COMMANDS=ON` for clang tooling integration. |
-| NFR-05.6 | AddressSanitizer and UBSan shall be enabled for debug presets on Linux and for `dev-debug` presets. |
+| NFR-05.6 | AddressSanitizer and UBSan shall be available behind the `LIB_FMU_TOOLKIT_ENABLE_SANITIZERS` option for supported (non-MinGW) debug builds. |
 
 ### NFR-06 — Performance
 
@@ -189,7 +207,7 @@ The library does **not** provide a graphical interface, a co-simulation master p
 | ID | Requirement |
 | --- | --- |
 | NFR-08.1 | libxml2 and libzip shall be the only third-party runtime dependencies of the library binary. |
-| NFR-08.2 | GoogleTest shall be the only test-time dependency and shall be auto-fetched if not provided by vcpkg. |
+| NFR-08.2 | GoogleTest shall be the only test-time dependency and shall be auto-fetched via CMake `FetchContent` if not already available in the build environment. |
 | NFR-08.3 | The public headers (`include/libfmu_toolkit/`) shall include only C++ standard library headers and `export.hpp`. No third-party headers shall be transitively included by the public API. |
 
 ---
@@ -198,8 +216,8 @@ The library does **not** provide a graphical interface, a co-simulation master p
 
 | ID | Constraint |
 | --- | --- |
-| C-01 | MSVC is not supported (ADR-0003). All code must compile under GCC and Clang only. |
+| C-01 | MSVC is not supported (ADR-0003). All code must compile under GCC/MinGW (the validated toolchain). |
 | C-02 | The library does not support FMU model exchange mode — only co-simulation mode is implemented. |
 | C-03 | The library does not implement a co-simulation master protocol. External time coordination (e.g. SIL-Kit) must use `FmuSession` directly. |
 | C-04 | FMU binaries with incorrect `modelIdentifier` in their shared library filename will pass loading but receive a validation warning, not an error. |
-| C-05 | The library does not support FMU packaging (creating `.fmu` archives). It is a consumer-side toolkit only. |
+| C-05 | The library does not package complete `.fmu` archives. It can generate `modelDescription.xml` and C accessor source (see FR-08) but does not compile binaries or assemble the ZIP container. |

@@ -1,5 +1,9 @@
 #pragma once
 
+/// @file fmu_package.hpp
+/// @brief Internal aggregate of everything extracted and parsed from an FMU archive.
+/// @internal
+
 #include "fmu_variable_types.hpp"
 #include "model_variable.hpp"
 #include "log_category.hpp"
@@ -13,55 +17,58 @@
 
 namespace libfmu_toolkit {
 
-// ---------------------------------------------------------------------------
-// UnitDef — a physical unit parsed from <UnitDefinitions>
-// ---------------------------------------------------------------------------
-
+/// @brief A physical unit definition parsed from `<UnitDefinitions>`.
+///
+/// SI conversion follows the affine formula `value_SI = factor * value + offset`.
+/// @req FR-02.4
 struct UnitDef {
-    std::string name;
-    double      factor{1.0};
-    double      offset{0.0};
+    std::string name;        ///< Unit name as declared in the XML (e.g. `"m/s2"`).
+    double      factor{1.0}; ///< Multiplicative SI conversion factor.
+    double      offset{0.0}; ///< Additive SI conversion offset.
 };
 
-// ---------------------------------------------------------------------------
-// TypeDef — a named type from <TypeDefinitions> / <SimpleType>
-// ---------------------------------------------------------------------------
-
+/// @brief A named type parsed from `<TypeDefinitions>` (FMI 3.0) or `<SimpleType>` (FMI 2.0).
+/// @req FR-02.4
 struct TypeDef {
-    std::string name;
-    std::string description;
-    DataType    dataType{DataType::Real};
-    std::string unit;
-    std::string quantity;
-    std::string displayUnit;
-    std::string minStr;
-    std::string maxStr;
+    std::string name;        ///< Declared type name, referenced by ModelVariable::typeName.
+    std::string description; ///< Human-readable description.
+    DataType    dataType{DataType::Real}; ///< Data type of variables using this type.
+    std::string unit;        ///< Physical unit name reference.
+    std::string quantity;    ///< Physical quantity (e.g. `"Velocity"`).
+    std::string displayUnit; ///< Preferred display unit.
+    std::string minStr;      ///< Minimum allowed value as a string (empty = unbounded).
+    std::string maxStr;      ///< Maximum allowed value as a string (empty = unbounded).
 };
 
-// ---------------------------------------------------------------------------
-// DomainDefaultExperiment — default simulation settings from XML
-// ---------------------------------------------------------------------------
-
+/// @brief Recommended simulation parameters parsed from `<DefaultExperiment>`.
+///
+/// The `has*` flags indicate which attributes were actually present in the XML;
+/// absent attributes keep their default numeric values but are not meaningful.
+/// @req FR-02.5
 struct DomainDefaultExperiment {
-    double startTime{0.0};
-    double stopTime{1.0};
-    double stepSize{0.0};
-    double tolerance{0.0};
-    bool   hasStartTime{false};
-    bool   hasStopTime{false};
-    bool   hasStepSize{false};
-    bool   hasTolerance{false};
+    double startTime{0.0};  ///< Recommended simulation start time.
+    double stopTime{1.0};   ///< Recommended simulation stop time.
+    double stepSize{0.0};   ///< Recommended communication step size (0.0 = unspecified).
+    double tolerance{0.0};  ///< Recommended solver tolerance (0.0 = unspecified).
+    bool   hasStartTime{false}; ///< `true` if `startTime` was present in the XML.
+    bool   hasStopTime{false};  ///< `true` if `stopTime` was present in the XML.
+    bool   hasStepSize{false};  ///< `true` if `stepSize` was present in the XML.
+    bool   hasTolerance{false}; ///< `true` if `tolerance` was present in the XML.
 };
 
-// ---------------------------------------------------------------------------
-// FmuPackage
-//
-// Aggregates everything extracted and parsed from an FMU archive.
-// Non-copyable but movable. The shared library handle is NOT owned here.
-// ---------------------------------------------------------------------------
-
+/// @brief Aggregates everything extracted and parsed from an FMU archive.
+///
+/// Holds the parsed metadata (variables, units, types, default experiment), the
+/// raw `modelDescription.xml`, the on-disk extraction paths, and the resolved
+/// FMI 2.0 or 3.0 function pointer tables.
+///
+/// @note Non-copyable but movable. The shared library OS handle (#sharedLibHandle)
+///       is **not** owned here — its lifetime is managed by the loader adapter.
+/// @req FR-01.2
 class FmuPackage {
 public:
+    /// @brief Resolved FMI 2.0 co-simulation entry points (raw `void*` symbols).
+    /// @req FR-01.3
     struct Fmi2Functions {
         void* fmi2GetTypesPlatform{nullptr};
         void* fmi2GetVersion{nullptr};
@@ -83,6 +90,8 @@ public:
         void* fmi2SetString{nullptr};
         void* fmi2DoStep{nullptr};
 
+        /// @brief Returns `true` if every required FMI 2.0 symbol was resolved.
+        /// @req FR-01.3
         [[nodiscard]] bool isComplete() const noexcept {
             return fmi2GetTypesPlatform        != nullptr
                 && fmi2GetVersion              != nullptr
@@ -106,6 +115,8 @@ public:
         }
     };
 
+    /// @brief Resolved FMI 3.0 co-simulation entry points (raw `void*` symbols).
+    /// @req FR-01.3
     struct Fmi3Functions {
         void* fmi3GetVersion{nullptr};
         void* fmi3SetDebugLogging{nullptr};
@@ -145,6 +156,8 @@ public:
         void* fmi3SetClock{nullptr};
         void* fmi3DoStep{nullptr};
 
+        /// @brief Returns `true` if the minimum required FMI 3.0 symbol set was resolved.
+        /// @req FR-01.3
         [[nodiscard]] bool isComplete() const noexcept {
             return fmi3GetVersion              != nullptr
                 && fmi3SetDebugLogging         != nullptr
@@ -163,46 +176,58 @@ public:
     FmuPackage() = default;
     ~FmuPackage() = default;
 
-    FmuPackage(const FmuPackage&)            = delete;
+    FmuPackage(const FmuPackage&)            = delete; ///< Non-copyable (owns parsed state).
     FmuPackage& operator=(const FmuPackage&) = delete;
-    FmuPackage(FmuPackage&&)                 = default;
+    FmuPackage(FmuPackage&&)                 = default; ///< Movable.
     FmuPackage& operator=(FmuPackage&&)      = default;
 
-    FmiVersion  fmiVersion{FmiVersion::FMI2};
+    FmiVersion  fmiVersion{FmiVersion::FMI2}; ///< FMI specification version of this FMU.
 
-    std::string modelName;
-    std::string modelIdentifier;
-    std::string guid;
-    std::string description;
-    std::string generationTool;
-    std::string generationDateAndTime;
-    std::string variableNamingConvention;
+    std::string modelName;             ///< Model name as declared in the XML.
+    std::string modelIdentifier;       ///< Identifier used to name the shared library.
+    std::string guid;                  ///< Globally unique identifier of the FMU.
+    std::string description;           ///< Human-readable model description.
+    std::string generationTool;        ///< Tool that generated the FMU (may be empty).
+    std::string generationDateAndTime; ///< ISO 8601 generation timestamp (may be empty).
+    std::string variableNamingConvention; ///< `"flat"` or `"structured"`.
 
-    uint32_t    numberOfEventIndicators{0};
+    uint32_t    numberOfEventIndicators{0}; ///< Number of event indicators (FMI 2.0 only).
 
-    std::vector<ModelVariable>  variables;
-    std::vector<LogCategory>    logCategories;
-    std::vector<UnitDef>        unitDefinitions;
-    std::vector<TypeDef>        typeDefinitions;
-    DomainDefaultExperiment     defaultExperiment;
+    std::vector<ModelVariable>  variables;       ///< All parsed model variables.
+    std::vector<LogCategory>    logCategories;   ///< Declared log categories.
+    std::vector<UnitDef>        unitDefinitions; ///< Parsed `<UnitDefinitions>` entries.
+    std::vector<TypeDef>        typeDefinitions; ///< Parsed named type definitions.
+    DomainDefaultExperiment     defaultExperiment; ///< Recommended experiment parameters.
 
-    std::string rawModelDescription;
+    std::string rawModelDescription; ///< Verbatim `modelDescription.xml` text (for XSD validation).
 
-    std::filesystem::path extractedPath;
-    std::filesystem::path sharedLibraryPath;
+    std::filesystem::path extractedPath;     ///< Temporary directory the archive was extracted to.
+    std::filesystem::path sharedLibraryPath; ///< Resolved path to the platform shared library.
 
-    /// Raw OS handle — NOT owned by FmuPackage.
+    /// @brief Raw OS shared library handle. @warning NOT owned by FmuPackage.
     void* sharedLibHandle{nullptr};
 
-    std::optional<Fmi2Functions> fmi2;
-    std::optional<Fmi3Functions> fmi3;
+    std::optional<Fmi2Functions> fmi2; ///< Resolved FMI 2.0 symbols (set when #isFmi2()).
+    std::optional<Fmi3Functions> fmi3; ///< Resolved FMI 3.0 symbols (set when #isFmi3()).
 
+    /// @brief Returns `true` if this is an FMI 2.0 FMU.
+    /// @req FR-01.4
     [[nodiscard]] bool isFmi2() const noexcept { return fmiVersion == FmiVersion::FMI2; }
+    /// @brief Returns `true` if this is an FMI 3.0 FMU.
+    /// @req FR-01.4
     [[nodiscard]] bool isFmi3() const noexcept { return fmiVersion == FmiVersion::FMI3; }
 
+    /// @brief Returns non-owning pointers to all variables with `causality == Input`.
+    /// @req FR-02.3
     [[nodiscard]] std::vector<const ModelVariable*> inputs()     const;
+    /// @brief Returns non-owning pointers to all variables with `causality == Output`.
+    /// @req FR-02.3
     [[nodiscard]] std::vector<const ModelVariable*> outputs()    const;
+    /// @brief Returns non-owning pointers to all variables with `causality == Parameter`.
+    /// @req FR-02.3
     [[nodiscard]] std::vector<const ModelVariable*> parameters() const;
+    /// @brief Finds a variable by exact name, or returns `nullptr` if absent.
+    /// @req FR-02.3
     [[nodiscard]] const ModelVariable*               findVariable(const std::string& name) const;
 };
 

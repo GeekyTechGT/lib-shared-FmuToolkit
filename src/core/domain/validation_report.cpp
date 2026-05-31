@@ -1,3 +1,7 @@
+/// @file validation_report.cpp
+/// @brief Implementation of ValidationReport error/warning accumulation.
+/// @internal
+
 #include "validation_report.hpp"
 #include <utility>
 

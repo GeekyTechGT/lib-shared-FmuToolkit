@@ -1,3 +1,7 @@
+/// @file generated_code_builder.cpp
+/// @brief Implementation of C accessor code generation from a JSON model (FR-08).
+/// @internal
+
 #include "fmu_model_description.hpp"
 
 #include <algorithm>

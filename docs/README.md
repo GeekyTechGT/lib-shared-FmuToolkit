@@ -6,7 +6,8 @@ This directory contains the technical documentation for `lib-fmu-toolkit`.
 
 | Document | Description |
 | --- | --- |
-| [requirements/srs.md](requirements/srs.md) | Software Requirements Specification — functional and non-functional requirements |
+| [requirements/srs.md](requirements/srs.md) | Software Requirements Specification — functional and non-functional requirements (FR/NFR/C identifiers) |
+| [requirements/traceability.md](requirements/traceability.md) | Requirements ↔ code ↔ test traceability matrix (ISO 26262 verification evidence) |
 
 ## Architecture
 

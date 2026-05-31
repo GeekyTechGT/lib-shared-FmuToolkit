@@ -1,3 +1,7 @@
+/// @file model_description_parser.cpp
+/// @brief Implementation of the libxml2 modelDescription.xml parser (FR-01.2, FR-02).
+/// @internal
+
 #include "model_description_parser.hpp"
 #include "core/exceptions/fmu_exception.hpp"
 #include "core/domain/log_category.hpp"

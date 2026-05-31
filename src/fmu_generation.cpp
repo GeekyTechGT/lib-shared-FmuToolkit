@@ -1,3 +1,7 @@
+/// @file fmu_generation.cpp
+/// @brief PIMPL facade implementation of the public FMU generation API (FR-08).
+/// @internal
+
 #include <libfmu_toolkit/fmu_generation.hpp>
 #include <libfmu_toolkit/exceptions.hpp>
 
