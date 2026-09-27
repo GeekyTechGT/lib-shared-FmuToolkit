@@ -1,0 +1,65 @@
+# CI for FmuToolkit (lib-shared): configure, build, test, static analysis
+# and coverage on Linux with the same CMake presets used locally.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ninja-build g++ gcc
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Python environment (orchestration scripts, clang-tidy, gcovr)
+        run: uv sync
+
+      - name: Fetch external resource repositories (project.json submodules)
+        shell: python
+        run: |
+          import json, pathlib, subprocess
+          for sub in json.loads(pathlib.Path("project.json").read_text()).get("submodules", []):
+              url = sub["url"].replace("git@github.com:", "https://github.com/")
+              ref = sub.get("branch") or sub.get("tag")
+              args = ["git", "clone", "--depth", "1"] + (["--branch", ref] if ref else []) + [url, f"external/{sub['name']}"]
+              subprocess.run(args, check=True)
+
+      - name: Configure
+        run: cmake --preset linux-gcc-debug
+
+      - name: Build
+        run: cmake --build --preset linux-gcc-debug
+
+      - name: Test
+        run: ctest --preset linux-gcc-debug --output-junit junit.xml
+
+      - name: Static analysis (clang-tidy)
+        if: hashFiles('tests/unit/CMakeLists.txt') != ''
+        run: uv run python scripts/prj_exec.py --preset linux-gcc-debug --commands 17
+
+      - name: Coverage (gcovr)
+        if: hashFiles('tests/unit/CMakeLists.txt') != ''
+        run: uv run python scripts/prj_exec.py --commands 18
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            build/linux-gcc-debug/junit.xml
+            build/linux-gcc-coverage/coverage/
+          if-no-files-found: ignore

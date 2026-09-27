@@ -1,0 +1,11 @@
+PROJECT_NAME           = "FmuToolkit"
+PROJECT_BRIEF          = "FmuToolkit - lib-shared"
+OUTPUT_DIRECTORY       = build/docs
+INPUT                  = include src
+RECURSIVE              = YES
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+QUIET                  = YES
+WARN_IF_UNDOCUMENTED   = NO

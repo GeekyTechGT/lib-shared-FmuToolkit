@@ -1,0 +1,18 @@
+[project]
+name = "fmutoolkit-tools"
+version = "0.1.0"
+description = "Orchestration scripts for FmuToolkit."
+requires-python = ">=3.10"
+dependencies = [
+    "colorama>=0.4.6,<1",
+    # Markdown -> PDF for the deployed documents/ (scripts/prj_docs.py).
+    "markdown-pdf>=1.3,<2",
+    # Quality tooling driven by scripts/prj_exec.py (commands 17 and 18).
+    "clang-tidy>=22,<24",
+    "gcovr>=8,<9",
+    "pydantic>=2.12,<3",
+    "rich>=14,<15",
+]
+
+[tool.uv]
+package = false

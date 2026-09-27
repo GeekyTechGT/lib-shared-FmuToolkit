@@ -1,0 +1,7 @@
+@PACKAGE_INIT@
+
+# Generic, name-agnostic package config consumed via find_package(<Name> CONFIG).
+# CMakePackageConfigHelpers substitutes @PACKAGE_INIT@ and PACKAGE_* variables
+# at configure time - this file requires no per-project edits.
+include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+check_required_components("@PROJECT_NAME@")

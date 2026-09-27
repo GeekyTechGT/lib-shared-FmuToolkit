@@ -1,0 +1,12 @@
+build/
+deploy/
+installer/*/
+.venv/
+.uv-cache/
+__pycache__/
+*.pyc
+.pytest_cache/
+.cache/
+*.log
+CMakeUserPresets.json
+compile_commands.json

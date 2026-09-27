@@ -1,0 +1,12 @@
+# Local, machine-specific policy overrides for FmuToolkit.
+# Not committed to version control by convention on some setups; kept here as
+# a documented starting point. Safe to edit freely per checkout.
+
+project: fmutoolkit
+category: lib-shared
+
+build:
+  default_preset: null   # null = auto-detect (windows-mingw64-debug / linux-gcc-debug)
+
+deploy:
+  allow_production: false   # require an explicit opt-in before deploying to environment: production
