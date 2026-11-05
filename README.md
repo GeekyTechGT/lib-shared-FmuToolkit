@@ -1,180 +1,184 @@
 # FmuToolkit
 
-> C++ toolkit for loading, parsing, validating, and simulating FMI 2.0/3.0 FMUs
+> A C++ shared library for loading, inspecting, validating and co-simulating **FMI 2.0 / FMI 3.0** Functional Mock-up Units.
 
 ![Category](https://img.shields.io/badge/category-lib--shared-blue)
-![Language](https://img.shields.io/badge/language-C%2B%2B23-orange)
+![Language](https://img.shields.io/badge/language-C%2B%2B20%2B-orange)
+![FMI](https://img.shields.io/badge/FMI-2.0%20%7C%203.0-informational)
 ![Build](https://img.shields.io/badge/build-CMake%20%2B%20Ninja-green)
 ![Artifact](https://img.shields.io/badge/artifact-libfmutoolkit.dll-lightgrey)
-![Tests](https://img.shields.io/badge/tests-107%20passing-brightgreen)
+
+**Version 1.1.0** · Namespace `libfmu_toolkit` · Consumed by `tool-FmuRunner`
 
 ## Table of Contents
 
-- [Description](#description)
-- [Category](#category)
-- [Compatibility contract](#compatibility-contract)
-- [Prerequisites](#prerequisites)
-- [Setup](#setup)
-- [Project Structure](#project-structure)
-- [Build](#build)
-- [Test](#test)
-- [Deployment](#deployment)
-- [Consuming the Library](#consuming-the-library)
-- [FMU Test Data](#fmu-test-data)
+- [Overview](#overview)
+- [Features](#features)
+- [Quick Example](#quick-example)
+- [Using the Library](#using-the-library)
 - [Documentation](#documentation)
-- [License](#license)
+- [Architecture at a Glance](#architecture-at-a-glance)
+- [Building from Source](#building-from-source)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Repository Layout](#repository-layout)
+- [Compatibility Contract](#compatibility-contract)
 - [Contributing](#contributing)
+- [License](#license)
 
-## Description
+## Overview
 
-**FmuToolkit** is a reusable **shared library** (`libfmutoolkit.dll` on
-Windows, `libfmutoolkit.so` on Linux) for loading, parsing, XSD/semantic
-validating, and co-simulating **FMI 2.0 and FMI 3.0** Functional Mock-up
-Units. It publishes a small, stable, PIMPL-based public API under `include/`
-and hides libxml2/libzip/dlopen entirely behind it.
+FmuToolkit gives an application a single, small entry point (`FmuEngine`) to work with FMUs: load the archive,
+read its model description, validate it against the standard, run a co-simulation, or drive one step by step
+from an external master. The public API is built on the C++ standard library only; libxml2, libzip and the
+dynamic-loading machinery are hidden behind a PIMPL facade and, on Windows/MinGW, linked statically into the
+DLL. Consumers need only `libfmutoolkit.dll` and `libwinpthread-1.dll` at run time.
 
-Internally it follows **hexagonal architecture**: a framework-free
-`domain/`, use cases in `application/service/`, five driven ports
-(`domain/port/out/`), and outbound adapters (`adapter/out/xml`, `zip`,
-`simulation`, `json`) that are the only places libxml2/libzip are used. See
-[`docs/architecture/architecture.md`](docs/architecture/architecture.md) for
-the full layer map and data-flow diagrams, and
-[`docs/adr/`](docs/adr/) for the design decisions behind it (hexagonal
-architecture, PIMPL, MinGW-only toolchains, the three-phase validation
-pipeline, ABI stability).
+> **If you want to *use* the library, start with the [User Manual](docs/user_manual/USER_MANUAL.md).** It is the
+> complete reference for integration, every API call, error handling and troubleshooting. This README is aimed at
+> people who build, test or maintain the library.
 
-This is a **port** onto `tool-ProjectScaffold`'s `lib-shared` category of a
-mature, already-tested pre-scaffold project - the domain logic, ~1500 lines
-of adapters/use cases, 107 tests and 8 examples were carried over with only
-their folder names and `#include` paths mechanically updated to this
-scaffold's hexagonal convention. See [`CHANGELOG.md`](CHANGELOG.md) for
-exactly what the port changed and [`CLAUDE.md`](CLAUDE.md) for the
-compatibility contract that constrains further changes.
+## Features
 
-## Category
-
-| Property | Value |
+| Area | Capability |
 |---|---|
-| Category | `lib-shared` - dynamically linked library |
-| Artifact name | `lib-shared-FmuToolkit` (folder, deploy name and dependency name) |
-| Binaries | `libfmutoolkit.dll` + import library `libfmutoolkit.dll.a` (MinGW) |
-| Public headers | flat: `include/lib_fmu_toolkit.hpp` (umbrella), `fmu_engine.hpp`, `types.hpp`, `exceptions.hpp`, `fmu_generation.hpp`, `export.hpp`, `version.hpp` |
-| Public namespace | `libfmu_toolkit` |
-| CMake target | `fmutoolkit` (alias `fmutoolkit::fmutoolkit`) |
-| Architecture | Hexagonal (ports and adapters), no inbound adapters |
-| Language | C++23 (built as C++20 originally; both compile unchanged) |
-| Build system | CMake >= 3.25 (presets) + Ninja |
-| Consumed by | `tool-FmuRunner` (`apps/cli/main.cpp`) |
+| **Loading** | Extracts `.fmu` archives, parses `modelDescription.xml`, loads the platform binary and resolves FMI symbols |
+| **Inspection** | Variables, causality/variability, units, type definitions, default experiment, FMI 3.0 terminals and layered standards |
+| **Validation** | Three phases: archive structure, XSD schema (libxml2), semantics - including FMI-LS-BUS rules; findings are returned, never thrown |
+| **Co-simulation** | Batch `simulate()` with progress callback, parameter injection, output selection and recording interval |
+| **Interactive control** | `FmuSession` for step-by-step masters; FMI 3.0 Event Mode, Binary variables and Clocks |
+| **Export** | CSV (RFC 4180) and JSON result writers |
+| **Generation** | JSON-driven `modelDescription.xml` and C accessor generation for FMI 2.0 and 3.0 |
+| **Platforms** | Windows (MinGW-w64) and Linux; FMI 2.0 and FMI 3.0 Co-Simulation |
 
-## Compatibility contract
+## Quick Example
 
-Unlike a fresh `lib-shared` project, this one's public API is **not** this
-scaffold's usual `include/fmutoolkit/`, `FMUTOOLKIT_EXPORT`,
-`fmutoolkit::`-namespaced shape - it is the pre-scaffold project's own,
-verbatim, because `tool-FmuRunner` already compiles against it as-is
-(`#include <lib_fmu_toolkit.hpp>`, `libfmu_toolkit::FmuEngine`). Only the
-**internal** folder names and the **CMake target/artifact naming** follow
-this scaffold's convention. See [`CLAUDE.md`](CLAUDE.md#compatibility-contract-with-tool-fmurunner-do-not-break)
-for the full, binding list before changing anything under `include/` or the
-install steps in the root `CMakeLists.txt`.
+```cpp
+#include <lib_fmu_toolkit.hpp>
 
-## Prerequisites
+libfmu_toolkit::FmuEngine engine;
+const uint64_t handle = engine.load("model.fmu");
 
-| Tool | Version | Used for |
-|---|---|---|
-| C/C++ toolchain | GCC 13+ / MinGW-w64 (Windows) | compiling |
-| CMake | 3.25+ | configure / build / install |
-| Ninja | any recent | build backend of every preset |
-| Python | 3.10+ | orchestration scripts |
-| [uv](https://docs.astral.sh/uv/) | latest | Python environment for `scripts/` |
-| `mingw-w64-x86_64-libxml2`, `mingw-w64-x86_64-libzip` (MSYS2) | any | XML validation / FMU archive extraction |
-| Doxygen | optional | API reference |
+const auto report = engine.validate(handle);          // never throws for findings
 
-libxml2 and libzip are linked **statically** into `libfmutoolkit.dll` on
-MinGW (`FMUTOOLKIT_MINGW_STATIC_RUNTIME`, default `ON`) - they are needed to
-*build* the library, but a consumer only needs `libfmutoolkit.dll` and
-`libwinpthread-1.dll` at runtime, never `libxml2.dll`/`libzip.dll`.
+libfmu_toolkit::SimConfig cfg;
+cfg.stopTime = 10.0;
+cfg.stepSize = 0.01;
 
-## Setup
-
-```bash
-uv sync                                  # Python environment for scripts/
-uv run python scripts/debug_env.py       # verify compilers, CMake, Ninja
-uv run python scripts/prj_exec.py --commands 2   # fetch the fmi-standard-2.0/3.0 XSD schemas
+const auto result = engine.simulate(handle, cfg);
+libfmu_toolkit::FmuEngine::exportCsv(result, "result.csv");
 ```
 
-The last step is not optional: `FmuValidator`'s schema phase and 5+ tests
-need `external/fmi-standard-{2.0,3.0}/schema/*.xsd`, fetched as `project.json`
-`submodules[]` (`kind: "git"`) from `modelica/fmi-standard` - see
-[FMU Test Data](#fmu-test-data) below.
+Eight complete, runnable programs are in [`examples/`](examples/).
 
-## Project Structure
+## Using the Library
+
+Link the imported CMake target and include the umbrella header:
+
+```cmake
+target_link_libraries(my_app PRIVATE fmutoolkit)
+```
+
+```cpp
+#include <lib_fmu_toolkit.hpp>
+```
+
+The deployed package contains `bin/` (`libfmutoolkit.dll`), `lib/` (`libfmutoolkit.dll.a`), `include/` (flat
+public headers), `documents/` and `license/`. Manual compilation flags, the required `LIB_FMU_TOOLKIT_SHARED`
+define on Windows, ABI requirements and schema (XSD) deployment for `validate()` are all covered in the
+[User Manual](docs/user_manual/USER_MANUAL.md#3-integrating-the-library).
+
+## Documentation
+
+| Document | Location | Audience |
+|---|---|---|
+| **User Manual** | [`docs/user_manual/USER_MANUAL.md`](docs/user_manual/USER_MANUAL.md) (shipped as PDF) | Library users |
+| Changelog | [`CHANGELOG.md`](CHANGELOG.md) | Everyone |
+| Architecture | [`docs/architecture/architecture.md`](docs/architecture/architecture.md) | Maintainers |
+| Design decisions | [`docs/adr/`](docs/adr/) (ADR-0001 to ADR-0005) | Maintainers |
+| Requirements (SRS) | [`docs/specs/srs.md`](docs/specs/srs.md) | Maintainers, QA |
+| FMI standard notes | [`docs/standards/`](docs/standards/) | Maintainers |
+| Project rules and compatibility contract | [`CLAUDE.md`](CLAUDE.md) | Contributors |
+
+## Architecture at a Glance
+
+The library follows a hexagonal (ports-and-adapters) design with no inbound adapters:
 
 ```text
-lib-shared-FmuToolkit/
-├── include/libfmu_toolkit/    # PUBLIC API (flat once deployed - see Compatibility contract)
-├── src/                       # private implementation (hexagonal)
-│   ├── domain/model/          # FmuPackage, ModelVariable, ValidationReport, ...
-│   ├── domain/exception/      # internal exception hierarchy
-│   ├── domain/port/out/       # IFmuLoader, IXmlValidator, ISimulationBackend, ...
-│   ├── application/service/   # FmuImporter, FmuValidator, SimulationController, generation/
-│   ├── adapter/out/{xml,zip,simulation,json}/
-│   └── fmu_engine.cpp, fmu_engine_impl.hpp, fmu_generation.cpp   # PIMPL composition root
-├── examples/                  # 8 runnable examples of the public API (01-08)
-├── tests/{unit,integration}/  # 107 GoogleTest cases; tests/data/*.fmu fixtures
-├── data/generation/           # FR-08 JSON model-definition examples
-├── external/                  # fmi-standard-2.0/3.0 (git submodules, not committed)
-├── docs/                      # architecture, ADRs, SRS, traceability, API/validation reference
-├── cmake/                     # reusable CMake modules + FmuToolkitThirdParty.cmake
-├── scripts/                   # prj_exec.py orchestrator and helpers
-├── CMakeLists.txt  CMakePresets.json
-├── project.json                # version 1.0.0, environment "production", deploy target
-└── CHANGELOG.md  INFO.md  LICENSE  Dockerfile
+ public PIMPL facade  (FmuEngine, FmuSession, generators)        include/libfmu_toolkit/
+            │
+ application services (import, validate, simulate, export,        src/application/service/
+                       generation)
+            │  depend only on ports
+ domain               (FMI model, exceptions, 5 driven ports)     src/domain/
+            │
+ outbound adapters    (libxml2, libzip, dlopen/FMI backend, JSON) src/adapter/out/
 ```
 
-## Build
+Rationale and trade-offs are recorded in the ADRs: hexagonal architecture, PIMPL public API, MinGW/GCC-only
+toolchains, the three-phase validation pipeline, and the ABI/source-distribution policy.
+
+## Building from Source
+
+### Prerequisites
+
+| Tool | Version | Purpose |
+|---|---|---|
+| GCC / MinGW-w64 | 13+ | Compiler |
+| CMake | 3.25+ | Configure, build, install |
+| Ninja | recent | Build backend used by every preset |
+| Python | 3.10+ and [uv](https://docs.astral.sh/uv/) | Orchestration scripts |
+| libxml2, libzip (MSYS2: `mingw-w64-x86_64-libxml2`, `mingw-w64-x86_64-libzip`) | any | Needed to **build**; statically linked into the DLL |
+| Doxygen | optional | API reference |
+
+### Steps
 
 ```bash
-uv run python scripts/prj_exec.py                                    # interactive menu
-uv run python scripts/prj_exec.py --preset windows-mingw64-debug --commands 2,5,6
+uv sync                                                  # Python environment
+uv run python scripts/debug_env.py                       # verify compilers, CMake, Ninja
+uv run python scripts/prj_exec.py --commands 2           # fetch the FMI XSD schemas (external/)
+uv run python scripts/prj_exec.py --preset windows-mingw64-debug --commands 5,6   # configure + build
 ```
 
-| # | Command | # | Command |
+Running `scripts/prj_exec.py` without arguments opens the interactive menu:
+
+| # | Action | # | Action |
 |---|---|---|---|
 | 1 | Select preset | 9 | Run tests |
 | 2 | Sync external repositories | 10 | Deploy |
-| 3 | Clean current preset | 11 | Full workflow (clean -> configure -> build -> deploy) |
+| 3 | Clean current preset | 11 | Full workflow (clean, configure, build, deploy) |
 | 4 | Clean all presets | 13 | Generate documentation PDFs |
 | 5 | Configure | 14 | Quit |
 | 6 | Build | | |
 | 8 | Run examples | | |
 
-Build outputs land in `build/<preset>/lib/` (the DLL included - this
-category's `RUNTIME_OUTPUT_DIRECTORY` is pinned to `lib/`, not `bin/`).
-Useful CMake options: `FMUTOOLKIT_BUILD_TESTS`, `FMUTOOLKIT_BUILD_EXAMPLES`,
-`FMUTOOLKIT_MINGW_STATIC_RUNTIME` (default `ON`).
+The schema step is required on a fresh clone: `external/fmi-standard-2.0` and `external/fmi-standard-3.0` are
+declared in `project.json` (`submodules[]`) and fetched from `modelica/fmi-standard`, not committed.
 
-## Test
+Build outputs are written to `build/<preset>/lib/` (the DLL included). Useful CMake options:
+`FMUTOOLKIT_BUILD_TESTS`, `FMUTOOLKIT_BUILD_EXAMPLES`, `FMUTOOLKIT_MINGW_STATIC_RUNTIME` (default `ON`).
+
+## Testing
 
 ```bash
-uv run python scripts/prj_exec.py --commands 8,9    # examples, then tests
+uv run python scripts/prj_exec.py --commands 8,9         # examples, then tests
 ```
 
-107 GoogleTest cases across two executables, `fmutoolkit_unit_tests` and
-`fmutoolkit_integration_tests` - both compile the library's own hexagonal
-sources directly in (see `CLAUDE.md`) rather than linking the DLL, so
-internal classes are directly testable. Reports go to
-`build/<preset>/test-reports/`.
+GoogleTest suites are split into `fmutoolkit_unit_tests` and `fmutoolkit_integration_tests`. Both compile the
+library's own sources directly (rather than linking the DLL) so that internal, non-exported classes can be
+tested. Reports are written to `build/<preset>/test-reports/`.
 
-| Suite | Covers |
+| Area | Covered by |
 |---|---|
-| `GeneratoreTest` / `SommatoreTest` / `CrossFmuTest` | Full FMU lifecycle: load, inspect, validate, simulate, export, step-by-step, unload |
-| `FmuEngineTest` / `FmuEngineIntegrationTest` | Engine construction, error paths, end-to-end pipeline |
-| `ValidatorStructureTest` / `ValidatorBinaryDirTest` / `ValidatorSchemaTest` / `ValidatorSemanticTest` | The three-phase validation pipeline (structure, XSD schema, semantics) |
-| `Fmi2ParserTest` / `Fmi3ParserTest` / `ParserErrorTest` / `ParserEdgeTest` | `modelDescription.xml` parsing, both FMI versions, malformed/edge inputs |
-| `CsvExporterTest` / `JsonExporterTest` | Result export correctness |
-| `SimulationControllerTest` | Step logic, recording interval, cancellation |
-| `FmuGeneration` (FR-08) | JSON-driven `modelDescription.xml` + C-accessor generation |
+| Full FMU lifecycle (load, inspect, validate, simulate, export, step-by-step) | Generator/Adder FMU tests, cross-FMU tests |
+| Three-phase validation | Structure, binary directory, schema and semantic validator tests |
+| `modelDescription.xml` parsing, FMI 2.0 and 3.0, malformed input | Parser tests |
+| Result export | CSV and JSON exporter tests |
+| Step logic, recording interval, cancellation | Simulation controller tests |
+| FMI 3.0 FMUs, Event Mode, Binary/Clock | Integration tests |
+| JSON-driven generation | Generation tests |
+
+Test FMUs (`tests/data/*.fmu`) embed both Windows and Linux binaries, so the suites run on either OS.
 
 ## Deployment
 
@@ -182,105 +186,59 @@ internal classes are directly testable. Reports go to
 uv run python scripts/prj_exec.py --commands 10
 ```
 
-`project.json`'s `environment` is `"production"` (not this scaffold's usual
-`"dev"` default - see [Compatibility contract](#compatibility-contract)), so
-deploy writes straight to the shared artifact store consumers read from,
-`<deploy_folder>/lib-shared-FmuToolkit/1.0.0/<preset>/`:
+`project.json` sets `environment` to `production`, so the deploy step writes to the shared artifact store read by
+consumers: `<deploy_folder>/lib-shared-FmuToolkit/<version>/<preset>/`.
 
 ```text
-<deploy>/
-├── bin/          # libfmutoolkit.dll (+ toolchain runtime DLLs)
-├── lib/          # libfmutoolkit.dll.a (import library)
-├── include/      # flat public headers (incl. version.hpp)
-├── documents/    # USER_MANUAL.pdf, CHANGELOG.pdf, INFO.md
-└── license/      # LICENSE
+├── bin/        libfmutoolkit.dll (+ libwinpthread-1.dll)
+├── lib/        libfmutoolkit.dll.a
+├── include/    flat public headers (incl. version.hpp)
+├── documents/  USER_MANUAL.pdf, CHANGELOG.pdf, INFO.md
+└── license/    LICENSE
 ```
 
-`USER_MANUAL.pdf` and `CHANGELOG.pdf` are rendered at deploy time from
-`docs/user_manual/USER_MANUAL.md` and `CHANGELOG.md`
-(`scripts/prj_docs.py`, `markdown-pdf`).
+The PDFs are rendered from `docs/user_manual/USER_MANUAL.md` and `CHANGELOG.md`; edit the Markdown sources, never
+the PDFs.
 
-## Consuming the Library
+## Repository Layout
 
-`tool-FmuRunner`'s `project.json` already does this:
-
-```json
-"dependencies": [
-    {
-        "name": "lib-shared-FmuToolkit",
-        "version": "1.0.0",
-        "copy_to": [
-            { "source": "bin", "destination": "bin" },
-            { "source": "lib", "destination": "lib" }
-        ]
-    }
-]
+```text
+lib-shared-FmuToolkit/
+├── include/libfmu_toolkit/   public API (installed flat)
+├── src/                      domain/, application/service/, adapter/out/, PIMPL composition root
+├── examples/                 01_basic_simulate … 08_generate_selective
+├── tests/                    unit/, integration/, data/*.fmu
+├── data/generation/          JSON model-definition samples
+├── external/                 FMI XSD schemas (fetched, not committed)
+├── docs/                     user_manual/, architecture/, adr/, specs/, standards/
+├── cmake/                    CMake modules incl. FmuToolkitThirdParty.cmake
+├── scripts/                  prj_exec.py orchestrator and helpers
+└── project.json  CMakeLists.txt  CMakePresets.json  CHANGELOG.md
 ```
 
-At configure time `cmake/Dependencies/Dependencies.cmake` locates
-`<deploy_folder>/lib-shared-FmuToolkit/1.0.0/<preset>/`, creates the
-imported target `fmutoolkit`, and the consumer links it:
+## Compatibility Contract
 
-```cmake
-if(TARGET fmutoolkit)
-    target_link_libraries(my_target PRIVATE fmutoolkit)
-endif()
-```
+`tool-FmuRunner` compiles against this library's public API as-is. The following are therefore fixed and must not
+be changed without updating FmuRunner in the same change (details in [`CLAUDE.md`](CLAUDE.md)):
 
-```cpp
-#include <lib_fmu_toolkit.hpp>   // master include
-
-libfmu_toolkit::FmuEngine engine;
-uint64_t handle = engine.load("model.fmu");
-auto validation = engine.validate(handle);
-libfmu_toolkit::SimConfig cfg{.startTime = 0.0, .stopTime = 10.0, .stepSize = 0.01};
-auto result = engine.simulate(handle, cfg);
-engine.exportJson(result, "output.json");
-```
-
-## FMU Test Data
-
-`tests/data/{Generatore,Sommatore,BouncingBall}.fmu` are hand-crafted FMI 3.0
-FMUs with **both Windows and Linux platform binaries** already embedded
-(`binaries/x86_64-{windows,linux}/`), so tests and examples run unmodified on
-either OS. `data/generation/*.json` are FR-08 model definitions consumed by
-`example_07_generate_from_json`/`08_generate_selective` and
-`test_FmuGeneration.cpp`.
-
-The `external/fmi-standard-{2.0,3.0}/` XSD schemas (needed by
-`FmuValidator`'s schema phase) are **not** committed - `scripts/prj_exec.py`
-menu `2` clones them from `modelica/fmi-standard` per `project.json`'s
-`submodules[]` (see [Setup](#setup)).
-
-## Documentation
-
-| Document | Location |
-|---|---|
-| User manual | `docs/user_manual/USER_MANUAL.md` (shipped as PDF) |
-| Changelog | `CHANGELOG.md` - the pre-scaffold project's history plus the port itself |
-| Architecture | `docs/architecture/architecture.md` - layer map, PIMPL pattern, data flows |
-| Architecture decision records | `docs/adr/0001`-`0005` |
-| Requirements & traceability | `docs/requirements/srs.md`, `docs/requirements/traceability.md` |
-| API reference | `docs/reference/api_reference.md`, `docs/reference/validation.md`; `doxygen Doxyfile` |
-| FMI standard notes | `docs/standards/fmi2_standard.md`, `docs/standards/fmi3_standard.md` |
-| AI assistant guidelines | `CLAUDE.md` (the binding compatibility contract), `AGENTS.md` |
-
-## License
-
-Distributed under the terms in [`LICENSE`](LICENSE) (`project.json` ->
-`license`).
+- namespace `libfmu_toolkit`;
+- flat installed headers (`#include <lib_fmu_toolkit.hpp>`) and the `LIB_FMU_TOOLKIT_API` export macro;
+- CMake target `fmutoolkit` producing `libfmutoolkit.dll` / `libfmutoolkit.dll.a`;
+- `project.json` `version` aligned with consumers' `dependencies[].version`, and `environment` set to
+  `production`;
+- static linking of libxml2/libzip on MinGW and `_GLIBCXX_USE_CXX11_ABI=1` as a `PUBLIC` definition.
 
 ## Contributing
 
 1. Branch from `develop/fmutoolkit-1` (`feature/<topic>`, `fix/<topic>`).
-2. Treat the public headers under `include/` as a contract - see
-   [Compatibility contract](#compatibility-contract) before touching them.
-   Breaking API/ABI changes bump the major version in `project.json` (it
-   also drives `SOVERSION`) and must be coordinated with `tool-FmuRunner`.
-3. Never add inbound adapters; keep the public header minimal.
-4. Every exported symbol needs Doxygen documentation, a test, and - for new
-   features - an example in `examples/`. Update the SRS/traceability docs
-   for any new or changed requirement.
-5. Use [Conventional Commits](https://www.conventionalcommits.org/); make
-   sure `scripts/prj_exec.py --commands 2,11,8,9` passes before opening a
-   pull request.
+2. Treat `include/` as a contract. Breaking API/ABI changes bump the major version in `project.json` and must be
+   coordinated with `tool-FmuRunner`.
+3. Do not add inbound adapters; keep the public headers free of third-party types.
+4. Every exported symbol needs Doxygen documentation and a test; new features need an example. Update the SRS,
+   ADRs, architecture document and **User Manual** with any behavioural change.
+5. Use [Conventional Commits](https://www.conventionalcommits.org/) and make sure
+   `scripts/prj_exec.py --commands 2,11,8,9` passes before opening a pull request.
+
+## License
+
+See [`LICENSE`](LICENSE); the license identifier is recorded in `project.json`.
