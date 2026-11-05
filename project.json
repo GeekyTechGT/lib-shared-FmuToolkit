@@ -1,6 +1,6 @@
 {
     "name": "fmutoolkit",
-    "version": "1.1.0",
+    "version": "1.0.0",
     "build": 0,
     "description": "C++ toolkit for loading, parsing, validating, and simulating FMI 2.0/3.0 FMUs",
     "license": "Proprietary",
