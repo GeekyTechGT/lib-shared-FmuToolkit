@@ -13,6 +13,7 @@ deploy still succeeds on a machine that cannot render PDFs.
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -41,6 +42,17 @@ def project_documents(project_root: Path, display_name: str) -> list[DocumentSpe
     ]
 
 
+# markdown-it emits no heading ids, so PyMuPDF's Story cannot resolve in-page
+# "#anchor" links and aborts the whole render ("No destination with id=...").
+# The PDF already gets a bookmark outline (toc_level), so in-page links are
+# flattened to their plain text before rendering.
+_INTERNAL_LINK = re.compile(r"\[([^\]]+)\]\(#[^)]*\)")
+
+
+def _strip_internal_links(text: str) -> str:
+    return _INTERNAL_LINK.sub(lambda m: m.group(1), text)
+
+
 def _render_with_markdown_pdf(source: Path, destination: Path, title: str) -> str | None:
     try:
         from markdown_pdf import MarkdownPdf, Section
@@ -53,7 +65,7 @@ def _render_with_markdown_pdf(source: Path, destination: Path, title: str) -> st
     pdf.meta["title"] = title
     # root= lets relative image links in the Markdown resolve against the
     # source file's own folder.
-    pdf.add_section(Section(source.read_text(encoding="utf-8"), root=str(source.parent)))
+    pdf.add_section(Section(_strip_internal_links(source.read_text(encoding="utf-8")), root=str(source.parent)))
     pdf.save(str(destination))
     return None
 
