@@ -8,7 +8,7 @@
 ![Build](https://img.shields.io/badge/build-CMake%20%2B%20Ninja-green)
 ![Artifact](https://img.shields.io/badge/artifact-libfmutoolkit.dll-lightgrey)
 
-**Version 1.1.0** · Namespace `libfmu_toolkit` · Consumed by `tool-FmuRunner`
+**Version 1.0.0** · Namespace `libfmu_toolkit` · Consumed by `tool-FmuRunner`
 
 ## Table of Contents
 
