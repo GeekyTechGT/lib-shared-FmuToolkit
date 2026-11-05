@@ -47,6 +47,7 @@ from prj_metadata import (
     is_docker_preset,
     load_metadata,
     python_command,
+    run_cli_main,
     run_command,
     runtime_environment,
     sync_one_repository,
@@ -780,4 +781,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    run_cli_main(main)

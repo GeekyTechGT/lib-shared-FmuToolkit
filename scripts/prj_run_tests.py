@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ElementTree
 from dataclasses import dataclass
 from pathlib import Path
 
-from prj_metadata import PROJECT_ROOT, build_directory, load_metadata, run_command, runtime_environment
+from prj_metadata import PROJECT_ROOT, build_directory, load_metadata, run_cli_main, run_command, runtime_environment
 from prj_models import ProjectModel, TestReportsModel
 from rich.console import Console
 
@@ -273,4 +273,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    run_cli_main(main)

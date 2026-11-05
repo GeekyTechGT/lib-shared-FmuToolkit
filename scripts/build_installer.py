@@ -17,6 +17,7 @@ from prj_metadata import (
     find_inno_setup_compiler,
     load_metadata,
     main_executable_name,
+    run_cli_main,
     stale_build_version,
 )
 from prj_models import ProjectModel, save_project_model
@@ -91,6 +92,8 @@ def render_iss_script(project: ProjectModel, guid: str, preset: str, source_dir:
         "__APP_PUBLISHER__": DEFAULT_PUBLISHER,
         # Relative to {app}: the deploy layout keeps executables under bin\.
         "__APP_EXE_NAME__": "bin\\" + main_executable_name(project),
+        # Bare filename (no directory) - what taskkill's /IM expects.
+        "__APP_EXE_BASENAME__": main_executable_name(project),
         "__APP_GUID__": guid,
         "__OUTPUT_DIR__": str(output_dir),
         "__OUTPUT_BASE_FILENAME__": f"{project.name}-setup-{project.version}",
@@ -177,4 +180,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    run_cli_main(main)

@@ -28,12 +28,44 @@ class TestReportsModel(BaseModel):
 
 
 class SubmoduleModel(BaseModel):
+    """One external resource fetched by `prj_exec.py`'s "Sync external
+    repositories" step, landing under `external/<path or name>`.
+
+    `kind` "git" (default, backward compatible) shallow-clones `url` at
+    `ref` (or the legacy `branch`/`tag`, still accepted); an existing clone
+    is `git pull --ff-only`d instead. `kind` "download_zip" downloads the
+    archive at `url` and extracts it once - `ref` is unused, and an existing,
+    non-empty target is left alone rather than re-downloaded (the archive is
+    a fixed release, not a moving branch).
+    """
+
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     name: str
+    kind: Literal["git", "download_zip"] = "git"
     url: str
+    # Destination relative to the project root. Empty = "external/<name>".
+    path: str | None = None
+    # git ref (branch, tag or commit) to check out. Preferred over the
+    # legacy branch/tag fields below, which are still read for compatibility
+    # with project.json files written before this field existed.
+    ref: str | None = None
     branch: str | None = None
     tag: str | None = None
+    # Free-text, ignored by every reader - documents why this entry exists.
+    comment: str | None = Field(default=None, alias="_comment")
+
+    @field_validator("name", "url")
+    @classmethod
+    def _must_not_be_blank(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("value must not be blank")
+        return cleaned
+
+    @property
+    def destination(self) -> str:
+        return self.path or f"external/{self.name}"
 
 
 class DependencyCopyMappingModel(BaseModel):
@@ -152,4 +184,4 @@ def load_project_model(project_json: Path) -> ProjectModel:
 
 
 def save_project_model(project_json: Path, project_model: ProjectModel) -> None:
-    write_json(project_json, project_model.model_dump(exclude_unset=True))
+    write_json(project_json, project_model.model_dump(exclude_unset=True, by_alias=True))

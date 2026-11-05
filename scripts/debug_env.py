@@ -5,7 +5,7 @@ from __future__ import annotations
 import platform
 import shutil
 
-from prj_metadata import find_docker_executable, find_inno_setup_compiler
+from prj_metadata import find_docker_executable, find_inno_setup_compiler, run_cli_main
 from rich import box
 from rich.console import Console
 from rich.table import Table
@@ -55,4 +55,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    run_cli_main(main)

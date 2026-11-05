@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from prj_metadata import PROJECT_ROOT, build_directory, load_metadata, runtime_environment
+from prj_metadata import PROJECT_ROOT, build_directory, load_metadata, run_cli_main, runtime_environment
 from rich import box
 from rich.console import Console
 from rich.table import Table
@@ -72,4 +72,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    run_cli_main(main)

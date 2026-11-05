@@ -9,13 +9,37 @@ from __future__ import annotations
 import os
 import platform
 import shutil
+import stat
 import subprocess
 import sys
+import tempfile
+import urllib.error
+import urllib.request
+import zipfile
 from pathlib import Path
 
 from prj_models import ProjectModel, ProjectModelError, load_project_model
 
 PROJECT_ROOT = Path(__file__).absolute().parent.parent
+
+
+def run_cli_main(main) -> None:
+    """Every script's `if __name__ == "__main__":` line should read
+    `run_cli_main(main)` instead of calling `main()` directly - the one place
+    Ctrl+C is handled for all of them. A build/configure/deploy step can run
+    for minutes; without this, Ctrl+C during one dumps a raw Python
+    traceback (`KeyboardInterrupt`) instead of just stopping. Piped/closed
+    stdin at an interactive `Prompt.ask()` raises `EOFError` instead - the
+    same "just stop cleanly" outcome applies, so it is caught alongside
+    `KeyboardInterrupt`. `main`'s return value is still used as the process
+    exit code, exactly as calling it directly would (`None` -> 0); a
+    `sys.exit()`/`SystemExit` raised from inside `main` itself is left
+    untouched."""
+    try:
+        raise SystemExit(main())
+    except (KeyboardInterrupt, EOFError):
+        print("\nInterrupted by user (Ctrl+C).", file=sys.stderr)
+        raise SystemExit(130) from None
 
 
 def find_docker_executable() -> str | None:
@@ -215,14 +239,61 @@ def ensure_basic_files(project_root: Path) -> None:
 
 
 def sync_one_repository(project_root: Path, submodule) -> int:
-    target = project_root / "external" / submodule.name
+    target = project_root / submodule.destination
+    if submodule.kind == "download_zip":
+        return _sync_zip_archive(target, submodule)
+    return _sync_git_repository(target, submodule)
+
+
+def _sync_git_repository(target: Path, submodule) -> int:
     if target.exists():
         return run_command(["git", "pull", "--ff-only"], cwd=target)
 
     args = ["git", "clone", "--depth", "1"]
-    if submodule.branch:
-        args += ["--branch", submodule.branch]
-    elif submodule.tag:
-        args += ["--branch", submodule.tag]
+    ref = submodule.ref or submodule.branch or submodule.tag
+    if ref:
+        args += ["--branch", ref]
     args += [submodule.url, str(target)]
     return run_command(args)
+
+
+def _sync_zip_archive(target: Path, submodule) -> int:
+    """Downloads and extracts a released archive (a vendor SDK, a spec
+    bundle, ...) once. Unlike a git clone, a fixed archive has nothing to
+    "pull" - an existing, non-empty target is left alone."""
+    if target.exists() and any(target.iterdir()):
+        print(f"{submodule.name}: already present at {target}, skipping download.")
+        return 0
+
+    print(f"{submodule.name}: downloading {submodule.url}")
+    try:
+        with tempfile.TemporaryDirectory(prefix=f"{submodule.name}-download-") as scratch:
+            archive_path = Path(scratch) / "archive.zip"
+            urllib.request.urlretrieve(submodule.url, archive_path)
+
+            extract_dir = Path(scratch) / "extracted"
+            with zipfile.ZipFile(archive_path) as archive:
+                archive.extractall(extract_dir)
+
+            # A single wrapping top-level folder (the common case for
+            # GitHub-style release archives) is unwrapped so `target` holds
+            # the SDK's own contents directly, not an extra nested folder.
+            entries = list(extract_dir.iterdir())
+            source = entries[0] if len(entries) == 1 and entries[0].is_dir() else extract_dir
+
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if target.exists():
+                shutil.rmtree(target, onerror=_rmtree_onerror)
+            shutil.move(str(source), str(target))
+    except (OSError, zipfile.BadZipFile, urllib.error.URLError) as exc:
+        print(f"Error: failed to download/extract {submodule.name}: {exc}", file=sys.stderr)
+        return 1
+
+    print(f"{submodule.name}: extracted to {target}")
+    return 0
+
+
+def _rmtree_onerror(func, path, exc_info) -> None:
+    del exc_info
+    Path(path).chmod(stat.S_IWRITE)
+    func(path)

@@ -7,6 +7,8 @@ import datetime
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from prj_metadata import run_cli_main
+
 SOURCE_DIRS = ("src", "include", "apps", "tests", "examples", "scripts", "frontend", "backend", "static")
 C_LIKE_SUFFIXES = {".c", ".h", ".cpp", ".hpp", ".ts", ".tsx", ".js", ".jsx"}
 PYTHON_SUFFIXES = {".py"}
@@ -145,4 +147,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    run_cli_main(main)
