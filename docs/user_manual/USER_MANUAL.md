@@ -1,6 +1,6 @@
 # FmuToolkit - User Manual
 
-**Library:** `libfmutoolkit` (shared library) · **Version:** 1.1.0 · **Language:** C++20 or later · **Namespace:** `libfmu_toolkit`
+**Library:** `libfmutoolkit` (shared library) · **Version:** 1.0.0 · **Language:** C++20 or later · **Namespace:** `libfmu_toolkit`
 
 This manual is the complete reference for **using** FmuToolkit from your own C++ application. It is
 self-contained: everything you need to integrate, call and troubleshoot the library is described here. You do
@@ -134,7 +134,7 @@ target_link_libraries(my_app PRIVATE fmutoolkit)
 For a plain CMake project that consumes the package folder directly:
 
 ```cmake
-set(FMUTOOLKIT_ROOT "C:/path/to/lib-shared-FmuToolkit/1.1.0/windows-mingw64-release")
+set(FMUTOOLKIT_ROOT "C:/path/to/lib-shared-FmuToolkit/1.0.0/windows-mingw64-release")
 
 add_library(fmutoolkit SHARED IMPORTED)
 set_target_properties(fmutoolkit PROPERTIES
@@ -186,7 +186,7 @@ CMake target defines it for you.
 LIB_FMU_TOOLKIT_VERSION_MAJOR   // e.g. 1
 LIB_FMU_TOOLKIT_VERSION_MINOR   // e.g. 1
 LIB_FMU_TOOLKIT_VERSION_PATCH   // e.g. 0
-LIB_FMU_TOOLKIT_VERSION_STRING  // "1.1.0"
+LIB_FMU_TOOLKIT_VERSION_STRING  // "1.0.0"
 ```
 
 ---

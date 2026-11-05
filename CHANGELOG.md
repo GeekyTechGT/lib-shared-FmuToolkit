@@ -2,9 +2,11 @@
 
 All notable changes to FmuToolkit will be documented in this file.
 
-## [1.1.0] - Unreleased
+## [1.0.0] - Unreleased
 
-FMI 3.0 Event Mode, Binary and Clock support, the building blocks of FMI-LS-BUS.
+### FMI 3.0 Event Mode, Binary and Clock support
+
+The building blocks of FMI-LS-BUS.
 
 - **Fix the FMI 3.0 backend ABI**: `fmi3InstantiateCoSimulation` is now called with its 12 parameters (the
   intermediate-update callback was missing), `fmi3Boolean` is `bool` (it was `int`), `eventModeUsed` /
@@ -21,7 +23,7 @@ FMI 3.0 Event Mode, Binary and Clock support, the building blocks of FMI-LS-BUS.
 - Not yet done: the FMU generator does not emit Binary/Clock variables, terminals or LS-BUS manifests; the zip
   extraction limits (zip-slip / zip-bomb) of the audit are untouched.
 
-## [1.0.0] - Unreleased
+### Port onto the lib-shared scaffold
 
 Ported from `lib-fmu-toolkit-old` onto `tool-ProjectScaffold`'s `lib-shared`
 category. The library's domain logic, use cases, ports, adapters (~1500
