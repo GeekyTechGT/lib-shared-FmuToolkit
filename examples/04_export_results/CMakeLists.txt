@@ -1,0 +1,1 @@
+fmutoolkit_configure_example(example_04_export_results main.cpp)

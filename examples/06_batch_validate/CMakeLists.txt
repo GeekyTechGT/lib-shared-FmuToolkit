@@ -1,0 +1,1 @@
+fmutoolkit_configure_example(example_06_batch_validate main.cpp)

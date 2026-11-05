@@ -1,0 +1,1 @@
+fmutoolkit_configure_example(example_01_basic_simulate main.cpp)
