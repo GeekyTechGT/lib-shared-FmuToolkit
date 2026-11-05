@@ -1,10 +1,6 @@
 {
     "version": 6,
-    "cmakeMinimumRequired": {
-        "major": 3,
-        "minor": 25,
-        "patch": 0
-    },
+    "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
     "configurePresets": [
         {
             "name": "base",
@@ -20,14 +16,12 @@
             "hidden": true,
             "inherits": "base",
             "generator": "Ninja",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Windows"
-            },
+            "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" },
             "cacheVariables": {
                 "CMAKE_CXX_COMPILER": "C:/eng_apps/msys64/mingw64/bin/g++.exe",
-                "CMAKE_MAKE_PROGRAM": "C:/eng_apps/Qt/Tools/Ninja/ninja.exe"
+                "CMAKE_C_COMPILER": "C:/eng_apps/msys64/mingw64/bin/gcc.exe",
+                "CMAKE_MAKE_PROGRAM": "C:/eng_apps/Qt/Tools/Ninja/ninja.exe",
+                "CMAKE_PREFIX_PATH": "C:/eng_apps/Qt/6.11.2/mingw_64"
             },
             "environment": {
                 "PATH": "C:/eng_apps/msys64/mingw64/bin;C:/eng_apps/Qt/Tools/mingw1310_64/bin;C:/eng_apps/Qt/Tools/Ninja;$penv{PATH}"
@@ -38,13 +32,21 @@
             "hidden": true,
             "inherits": "base",
             "generator": "Ninja",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Linux"
-            },
+            "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" },
             "cacheVariables": {
+                "CMAKE_C_COMPILER": "gcc",
                 "CMAKE_CXX_COMPILER": "g++"
+            }
+        },
+        {
+            "name": "linux-clang-base",
+            "hidden": true,
+            "inherits": "base",
+            "generator": "Ninja",
+            "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" },
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++"
             }
         },
         {
@@ -53,6 +55,7 @@
             "inherits": "base",
             "generator": "Ninja",
             "cacheVariables": {
+                "CMAKE_C_COMPILER": "gcc",
                 "CMAKE_CXX_COMPILER": "g++",
                 "FMUTOOLKIT_BUILD_TESTS": "ON"
             }
@@ -96,6 +99,25 @@
             }
         },
         {
+            "name": "linux-clang-debug",
+            "inherits": "linux-clang-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "FMUTOOLKIT_BUILD_TESTS": "ON",
+                "FMUTOOLKIT_ENABLE_SANITIZERS": "ON"
+            }
+        },
+        {
+            "name": "linux-clang-release",
+            "inherits": "linux-clang-base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "FMUTOOLKIT_BUILD_TESTS": "ON",
+                "FMUTOOLKIT_ENABLE_SANITIZERS": "OFF",
+                "FMUTOOLKIT_ENABLE_LTO": "ON"
+            }
+        },
+        {
             "name": "windows-mingw64-coverage",
             "inherits": "windows-mingw64-debug",
             "cacheVariables": {
@@ -131,104 +153,30 @@
         }
     ],
     "buildPresets": [
-        {
-            "name": "windows-mingw64-debug",
-            "configurePreset": "windows-mingw64-debug",
-            "environment": {
-                "PATH": "C:/eng_apps/msys64/mingw64/bin;C:/eng_apps/Qt/Tools/mingw1310_64/bin;C:/eng_apps/Qt/Tools/Ninja;$penv{PATH}"
-            }
-        },
-        {
-            "name": "windows-mingw64-release",
-            "configurePreset": "windows-mingw64-release",
-            "environment": {
-                "PATH": "C:/eng_apps/msys64/mingw64/bin;C:/eng_apps/Qt/Tools/mingw1310_64/bin;C:/eng_apps/Qt/Tools/Ninja;$penv{PATH}"
-            }
-        },
-        {
-            "name": "windows-mingw64-coverage",
-            "configurePreset": "windows-mingw64-coverage",
-            "environment": {
-                "PATH": "C:/eng_apps/msys64/mingw64/bin;C:/eng_apps/Qt/Tools/mingw1310_64/bin;C:/eng_apps/Qt/Tools/Ninja;$penv{PATH}"
-            }
-        },
-        {
-            "name": "linux-gcc-debug",
-            "configurePreset": "linux-gcc-debug"
-        },
-        {
-            "name": "linux-gcc-coverage",
-            "configurePreset": "linux-gcc-coverage"
-        },
-        {
-            "name": "linux-gcc-release",
-            "configurePreset": "linux-gcc-release"
-        },
-        {
-            "name": "docker-gcc-debug",
-            "configurePreset": "docker-gcc-debug"
-        },
-        {
-            "name": "docker-gcc-release",
-            "configurePreset": "docker-gcc-release"
-        }
+        { "name": "windows-mingw64-debug", "configurePreset": "windows-mingw64-debug",
+          "environment": { "PATH": "C:/eng_apps/msys64/mingw64/bin;C:/eng_apps/Qt/Tools/mingw1310_64/bin;C:/eng_apps/Qt/Tools/Ninja;$penv{PATH}" } },
+        { "name": "windows-mingw64-release", "configurePreset": "windows-mingw64-release",
+          "environment": { "PATH": "C:/eng_apps/msys64/mingw64/bin;C:/eng_apps/Qt/Tools/mingw1310_64/bin;C:/eng_apps/Qt/Tools/Ninja;$penv{PATH}" } },
+        { "name": "windows-mingw64-coverage", "configurePreset": "windows-mingw64-coverage",
+          "environment": { "PATH": "C:/eng_apps/msys64/mingw64/bin;C:/eng_apps/Qt/Tools/mingw1310_64/bin;C:/eng_apps/Qt/Tools/Ninja;$penv{PATH}" } },
+        { "name": "linux-gcc-debug", "configurePreset": "linux-gcc-debug" },
+        { "name": "linux-gcc-coverage", "configurePreset": "linux-gcc-coverage" },
+        { "name": "linux-gcc-release", "configurePreset": "linux-gcc-release" },
+        { "name": "linux-clang-debug", "configurePreset": "linux-clang-debug" },
+        { "name": "linux-clang-release", "configurePreset": "linux-clang-release" },
+        { "name": "docker-gcc-debug", "configurePreset": "docker-gcc-debug" },
+        { "name": "docker-gcc-release", "configurePreset": "docker-gcc-release" }
     ],
     "testPresets": [
-        {
-            "name": "windows-mingw64-debug",
-            "configurePreset": "windows-mingw64-debug",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "windows-mingw64-release",
-            "configurePreset": "windows-mingw64-release",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "windows-mingw64-coverage",
-            "configurePreset": "windows-mingw64-coverage",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "linux-gcc-debug",
-            "configurePreset": "linux-gcc-debug",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "linux-gcc-coverage",
-            "configurePreset": "linux-gcc-coverage",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "linux-gcc-release",
-            "configurePreset": "linux-gcc-release",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "docker-gcc-debug",
-            "configurePreset": "docker-gcc-debug",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "docker-gcc-release",
-            "configurePreset": "docker-gcc-release",
-            "output": {
-                "outputOnFailure": true
-            }
-        }
+        { "name": "windows-mingw64-debug", "configurePreset": "windows-mingw64-debug", "output": { "outputOnFailure": true } },
+        { "name": "windows-mingw64-release", "configurePreset": "windows-mingw64-release", "output": { "outputOnFailure": true } },
+        { "name": "windows-mingw64-coverage", "configurePreset": "windows-mingw64-coverage", "output": { "outputOnFailure": true } },
+        { "name": "linux-gcc-debug", "configurePreset": "linux-gcc-debug", "output": { "outputOnFailure": true } },
+        { "name": "linux-gcc-coverage", "configurePreset": "linux-gcc-coverage", "output": { "outputOnFailure": true } },
+        { "name": "linux-gcc-release", "configurePreset": "linux-gcc-release", "output": { "outputOnFailure": true } },
+        { "name": "linux-clang-debug", "configurePreset": "linux-clang-debug", "output": { "outputOnFailure": true } },
+        { "name": "linux-clang-release", "configurePreset": "linux-clang-release", "output": { "outputOnFailure": true } },
+        { "name": "docker-gcc-debug", "configurePreset": "docker-gcc-debug", "output": { "outputOnFailure": true } },
+        { "name": "docker-gcc-release", "configurePreset": "docker-gcc-release", "output": { "outputOnFailure": true } }
     ]
 }

@@ -42,6 +42,8 @@ include(LibraryOptions)
 include(Sanitizers)
 include(Coverage)
 include(Dependencies)
+include(ThirdParty)
+include(FmuToolkitThirdParty)
 include(HexagonalTarget)
 include(InstallTargets)
 include(VersionHeader)
@@ -60,8 +62,25 @@ if(${PROJECT_IDENTIFIER_UPPER}_BUILD_TESTS AND EXISTS "${CMAKE_SOURCE_DIR}/tests
 endif()
 
 if(PROJECT_CATEGORY MATCHES "^lib-(shared|static)$")
+    # No INCLUDE_DIRS: gt_install_target()'s default install(DIRECTORY ...)
+    # would preserve the include/libfmu_toolkit/ subfolder. Public headers
+    # are ported from the pre-scaffold project, which installs them FLAT
+    # (no subfolder) - tool-FmuRunner's already-working
+    # `#include <lib_fmu_toolkit.hpp>` depends on that exact layout, so it
+    # is kept here rather than switched to this scaffold's default
+    # include/fmutoolkit/ convention.
     gt_install_target(${PROJECT_IDENTIFIER}
         CATEGORY ${PROJECT_CATEGORY}
-        INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/include"
+    )
+    install(
+        FILES
+            include/libfmu_toolkit/export.hpp
+            include/libfmu_toolkit/exceptions.hpp
+            include/libfmu_toolkit/fmu_generation.hpp
+            include/libfmu_toolkit/fmu_engine.hpp
+            include/libfmu_toolkit/lib_fmu_toolkit.hpp
+            include/libfmu_toolkit/types.hpp
+            "${CMAKE_BINARY_DIR}/src/generated/version.hpp"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     )
 endif()
